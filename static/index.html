@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Intelligence Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>⚡ Energy Intelligence Dashboard</h1>
+            <p> • Energy Intelligence & Monitoring</p>
+        </div>
+        <span class="live">● Live Monitoring</span>
+    </header>
+
+    <main>
+
+        <h2 class="section-title">Key Performance Indicators</h2>
+
+        <section class="kpis">
+            <div class="kpi">
+                <span>Total Energy</span>
+                <strong id="totalEnergy">--</strong>
+            </div>
+            <div class="kpi">
+                <span>Average Interval Energy</span>
+                <strong id="averageEnergy">--</strong>
+            </div>
+            <div class="kpi">
+                <span>Peak Usage</span>
+                <strong id="peakEnergy">--</strong>
+            </div>
+            <div class="kpi">
+                <span>Energy Anomalies</span>
+                <strong id="anomalyCount">--</strong>
+            </div>
+        </section>
+
+        <section class="grid two">
+            <div class="card">
+                <h2>Energy by Building</h2>
+                <div id="buildingChart" class="bar-chart"></div>
+            </div>
+
+            <div class="card trend-card">
+                <h2>Hourly Energy Trend</h2>
+
+                <div class="trend-wrapper">
+                    <svg
+                        id="trendChart"
+                        viewBox="0 0 760 380"
+                        preserveAspectRatio="xMidYMid meet"
+                        aria-label="Hourly energy trend graph"
+                    ></svg>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid two">
+            <div class="card">
+                <h2>Energy by Room</h2>
+                <div id="roomChart" class="bar-chart"></div>
+            </div>
+
+            <div class="card">
+                <h2>Peak Usage</h2>
+                <div id="peakDetails" class="details"></div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Energy Anomalies</h2>
+            <div id="anomalies"></div>
+        </section>
+
+        <section class="card">
+            <h2>🤖 Energy Agent Recommendations</h2>
+            <div id="recommendations"></div>
+        </section>
+    </main>
+
+    <div id="energyTooltip"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
