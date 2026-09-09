@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Maintenance Agent</title>
+
+    <link rel="stylesheet" href="/static/maintenance.css">
+
+</head>
+
+
+<body>
+
+    <div class="maintenance-page">
+
+
+        <header class="page-header">
+
+            <div>
+
+                <h1>
+                    Maintenance Agent
+                </h1>
+
+                <p>
+                    HVAC equipment health monitoring,
+                    maintenance recommendations and
+                    future condition prediction
+                </p>
+
+            </div>
+
+
+            <button id="refreshButton" class="refresh-button">
+                Refresh
+            </button>
+
+        </header>
+
+
+
+        <!-- KPI CARDS -->
+
+        <section class="kpi-grid">
+
+
+            <div class="kpi-card">
+
+                <span class="kpi-label">
+                    Assets Monitored
+                </span>
+
+                <span id="assetsMonitored" class="kpi-value">
+                    0
+                </span>
+
+            </div>
+
+
+
+            <div class="kpi-card">
+
+                <span class="kpi-label">
+                    Current Faults
+                </span>
+
+                <span id="faultsDetected" class="kpi-value">
+                    0
+                </span>
+
+            </div>
+
+
+
+            <div class="kpi-card">
+
+                <span class="kpi-label">
+                    Maintenance Recommendations
+                </span>
+
+                <span id="maintenanceRecommendations" class="kpi-value">
+                    0
+                </span>
+
+            </div>
+
+
+
+            <div class="kpi-card">
+
+                <span class="kpi-label">
+                    Average Health
+                </span>
+
+                <span id="averageHealth" class="kpi-value">
+                    0
+                </span>
+
+            </div>
+
+
+
+            <div class="kpi-card">
+
+                <span class="kpi-label">
+                    High-Risk Assets
+                </span>
+
+                <span id="highRiskAssets" class="kpi-value">
+                    0
+                </span>
+
+            </div>
+
+
+
+            <div class="kpi-card">
+
+                <span class="kpi-label">
+                    Predicted Deterioration
+                </span>
+
+                <span id="deterioratingAssets" class="kpi-value">
+                    0
+                </span>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- HEALTH DISTRIBUTION -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Equipment Health Distribution
+                    </h2>
+
+                    <p>
+                        Current health condition of
+                        monitored facility assets
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div id="healthDistribution" class="health-distribution">
+
+                <div class="loading">
+                    Loading health data...
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- HEALTH SCORE -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Equipment Health by Room
+                    </h2>
+
+                    <p>
+                        Current health score for each
+                        monitored building-room asset
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="chart-container">
+
+                <canvas id="healthScoreChart"></canvas>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- FUTURE CONDITION -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Future Condition Prediction
+                    </h2>
+
+                    <p>
+                        ML prediction of the next
+                        equipment condition
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="chart-container">
+
+                <canvas id="futureConditionChart"></canvas>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- MAINTENANCE ALERTS -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Maintenance Alerts
+                    </h2>
+
+                    <p>
+                        Assets requiring maintenance
+                        attention
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Asset
+                            </th>
+
+                            <th>
+                                Health
+                            </th>
+
+                            <th>
+                                Current Risk
+                            </th>
+
+                            <th>
+                                Future Condition
+                            </th>
+
+                            <th>
+                                Priority
+                            </th>
+
+                            <th>
+                                Recommendation
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="alertsTableBody">
+
+                        <tr>
+
+                            <td colspan="6" class="loading">
+                                Loading maintenance
+                                alerts...
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- MAINTENANCE SCHEDULE -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Maintenance Schedule
+                    </h2>
+
+                    <p>
+                        Recommended maintenance actions
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Asset
+                            </th>
+
+                            <th>
+                                Priority
+                            </th>
+
+                            <th>
+                                Action
+                            </th>
+
+                            <th>
+                                Time Window
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="scheduleTableBody">
+
+                        <tr>
+
+                            <td colspan="5" class="loading">
+                                Loading schedule...
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ASSET HEALTH -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Asset Health
+                    </h2>
+
+                    <p>
+                        Current condition and predicted
+                        future condition
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Asset
+                            </th>
+
+                            <th>
+                                Equipment
+                            </th>
+
+                            <th>
+                                Health
+                            </th>
+
+                            <th>
+                                Risk
+                            </th>
+
+                            <th>
+                                Category
+                            </th>
+
+                            <th>
+                                Future Condition
+                            </th>
+
+                            <th>
+                                Observations
+                            </th>
+
+                            <th>
+                                Last Reading
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="assetsTableBody">
+
+                        <tr>
+
+                            <td colspan="8" class="loading">
+                                Loading asset data...
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- WORK ORDERS -->
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>
+                        Work Order Tracking
+                    </h2>
+
+                    <p>
+                        Track maintenance actions
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Asset
+                            </th>
+
+                            <th>
+                                Priority
+                            </th>
+
+                            <th>
+                                Recommendation
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="workOrdersTableBody">
+
+                        <tr>
+
+                            <td colspan="4" class="loading">
+                                Loading work orders...
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- DATA SOURCE -->
+
+        <footer class="data-source">
+
+            <strong>
+                Data source:
+            </strong>
+
+            <span id="dataSource">
+                Facility sensor data from
+                facility_data.csv
+            </span>
+
+
+            <p id="dataNote">
+                Loading model information...
+            </p>
+
+        </footer>
+
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="/static/maintenance.js"></script>
+
+
+</body>
+
+</html>

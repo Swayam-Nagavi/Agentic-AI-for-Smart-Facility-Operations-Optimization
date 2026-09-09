@@ -1,0 +1,650 @@
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 28px;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.topbar {
+  background: white;
+  padding: 22px 32px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.topbar h1 {
+  margin: 0 0 6px 0;
+
+  font-size: 28px;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+.topbar p {
+  margin: 0;
+
+  font-size: 14px;
+
+  color: #6b7280;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 8px 14px;
+
+  border-radius: 20px;
+
+  background: #ecfdf5;
+
+  color: #059669;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   SECTION TITLE
+   ========================================================= */
+
+.section-title {
+  margin: 10px 0 18px;
+
+  font-size: 22px;
+
+  color: #111827;
+}
+
+
+/* =========================================================
+   MONITORING INFORMATION
+   ========================================================= */
+
+.info-banner {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  align-items: center;
+
+  gap: 18px;
+
+  margin-bottom: 28px;
+
+  padding: 15px 20px;
+
+  background: #f8fafc;
+
+  border: 1px solid #dbe3ec;
+
+  border-radius: 10px;
+
+  font-size: 13px;
+
+  color: #475569;
+}
+
+.info-banner strong {
+  color: #1e293b;
+}
+
+.info-banner span {
+  padding-left: 18px;
+
+  border-left: 1px solid #d8dee8;
+}
+
+
+/* =========================================================
+   KPI GRID
+   ========================================================= */
+
+.kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 18px;
+
+  margin-bottom: 22px;
+}
+
+.kpi {
+  min-height: 135px;
+
+  padding: 22px;
+
+  background: white;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+
+  box-shadow:
+    0 3px 12px rgba(15, 23, 42, 0.06);
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+}
+
+.kpi span {
+  display: block;
+
+  margin-bottom: 8px;
+
+  font-size: 14px;
+
+  color: #64748b;
+
+  font-weight: 500;
+}
+
+.kpi strong {
+  display: block;
+
+  font-size: 27px;
+
+  line-height: 1.2;
+
+  color: #111827;
+}
+
+.kpi small {
+  display: block;
+
+  margin-top: 8px;
+
+  font-size: 11px;
+
+  line-height: 1.4;
+
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.card {
+  background: white;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+
+  padding: 24px;
+
+  margin-bottom: 22px;
+
+  box-shadow:
+    0 3px 12px rgba(15, 23, 42, 0.06);
+}
+
+.card h2 {
+  margin-bottom: 16px;
+
+  font-size: 19px;
+
+  color: #1f2937;
+}
+
+
+/* =========================================================
+   TWO COLUMN GRID
+   ========================================================= */
+
+.grid.two {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 22px;
+
+  margin-bottom: 22px;
+}
+
+.grid.two .card {
+  margin-bottom: 0;
+}
+
+
+/* =========================================================
+   CHART DESCRIPTION
+   ========================================================= */
+
+.chart-description {
+  margin: -5px 0 20px;
+
+  font-size: 13px;
+
+  line-height: 1.6;
+
+  color: #64748b;
+}
+
+
+/* =========================================================
+   BAR CHART
+   ========================================================= */
+
+.bar-chart {
+  width: 100%;
+}
+
+.bar-row {
+  display: grid;
+
+  grid-template-columns: 155px 1fr 90px;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.bar-row>span:first-child {
+  font-size: 13px;
+
+  line-height: 1.35;
+
+  color: #374151;
+}
+
+.bar-row>span:last-child {
+  font-size: 12px;
+
+  text-align: right;
+
+  color: #64748b;
+
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 12px;
+
+  background: #e5e7eb;
+
+  border-radius: 999px;
+
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+
+  min-width: 2px;
+
+  background: #3b82f6;
+
+  border-radius: 999px;
+
+  transition: width 0.4s ease;
+}
+
+
+/* =========================================================
+   ENERGY DISTRIBUTION
+   ========================================================= */
+
+.distribution-row {
+  margin-bottom: 22px;
+}
+
+.distribution-top {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 7px;
+
+  font-size: 14px;
+}
+
+.distribution-top span:first-child {
+  color: #374151;
+
+  font-weight: 500;
+}
+
+.distribution-top span:last-child {
+  color: #3b82f6;
+
+  font-weight: 600;
+}
+
+.distribution-track {
+  width: 100%;
+
+  height: 11px;
+
+  background: #e5e7eb;
+
+  border-radius: 999px;
+
+  overflow: hidden;
+}
+
+.distribution-bar {
+  height: 100%;
+
+  background: #3b82f6;
+
+  border-radius: 999px;
+
+  transition: width 0.5s ease;
+}
+
+.distribution-value {
+  margin-top: 6px;
+
+  font-size: 12px;
+
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   HOURLY TREND
+   ========================================================= */
+
+.trend-card {
+  overflow: hidden;
+}
+
+.trend-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+#trendChart {
+  display: block;
+
+  width: 100%;
+
+  min-width: 650px;
+
+  height: auto;
+}
+
+
+/* =========================================================
+   PEAK DETAILS
+   ========================================================= */
+
+.details {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+
+  padding-top: 8px;
+}
+
+.details div {
+  padding: 12px 14px;
+
+  background: #f8fafc;
+
+  border-radius: 8px;
+
+  border: 1px solid #edf0f4;
+
+  font-size: 14px;
+
+  color: #475569;
+}
+
+.details b {
+  color: #1f2937;
+}
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 13px;
+}
+
+thead {
+  background: #f8fafc;
+}
+
+th {
+  padding: 13px 12px;
+
+  text-align: left;
+
+  font-weight: 600;
+
+  color: #475569;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+td {
+  padding: 13px 12px;
+
+  color: #4b5563;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+
+/* =========================================================
+   AGENT RECOMMENDATIONS
+   ========================================================= */
+
+.alert {
+  padding: 16px 18px;
+
+  margin-bottom: 12px;
+
+  border-radius: 9px;
+
+  border: 1px solid #e5e7eb;
+
+  background: #f8fafc;
+
+  line-height: 1.5;
+
+  font-size: 14px;
+}
+
+.alert-title {
+  margin-bottom: 6px;
+
+  font-weight: 700;
+
+  color: #1f2937;
+}
+
+.alert.high {
+  border-left: 4px solid #ef4444;
+
+  background: #fff7f7;
+}
+
+.alert.medium {
+  border-left: 4px solid #f59e0b;
+
+  background: #fffbeb;
+}
+
+.alert.low {
+  border-left: 4px solid #10b981;
+
+  background: #f0fdf4;
+}
+
+.muted {
+  color: #94a3b8;
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ENERGY TOOLTIP
+   ========================================================= */
+
+#energyTooltip {
+  display: none;
+
+  position: fixed;
+
+  z-index: 9999;
+
+  padding: 12px 14px;
+
+  background: #111827;
+
+  color: white;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  line-height: 1.6;
+
+  pointer-events: none;
+
+  box-shadow:
+    0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+#energyTooltip strong {
+  color: #e5e7eb;
+}
+
+
+/* =========================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .kpis {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .grid.two {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  main {
+    padding: 16px;
+  }
+
+  .topbar {
+    padding: 18px;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 12px;
+  }
+
+  .topbar h1 {
+    font-size: 23px;
+  }
+
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .info-banner {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+
+  .info-banner span {
+    padding-left: 0;
+
+    border-left: none;
+  }
+
+  .bar-row {
+    grid-template-columns:
+      110px 1fr 75px;
+
+    gap: 8px;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  table {
+    display: block;
+
+    overflow-x: auto;
+
+    white-space: nowrap;
+  }
+
+}

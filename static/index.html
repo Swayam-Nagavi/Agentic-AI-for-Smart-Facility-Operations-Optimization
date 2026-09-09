@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Energy Intelligence Dashboard</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <header class="topbar">
+
+        <div>
+            <h1>⚡ Energy Intelligence Dashboard</h1>
+
+            <p>
+                Energy Intelligence & Monitoring
+                • 15-Minute Monitoring Interval
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a class="nav-link" href="/static/maintenance.html">🔧 Predictive Maintenance</a>
+            <span class="live">● Live Monitoring</span>
+        </div>
+
+    </header>
+
+
+    <main>
+
+        <!-- =====================================================
+         DATA INFORMATION
+         ===================================================== -->
+
+        <section class="info-banner">
+
+            <strong>Monitoring Configuration</strong>
+
+            <span>
+                Sampling Interval: <b>15 minutes</b>
+            </span>
+
+            <span>
+                Energy Unit: <b>kWh per 15-minute interval</b>
+            </span>
+
+            <span>
+                Dataset: <b>24 hours • 864 records</b>
+            </span>
+
+        </section>
+
+
+        <!-- =====================================================
+         KPI SECTION
+         ===================================================== -->
+
+        <h2 class="section-title">
+            Key Performance Indicators
+        </h2>
+
+
+        <section class="kpis">
+
+            <div class="kpi">
+
+                <span>Total Energy</span>
+
+                <strong id="totalEnergy">
+                    --
+                </strong>
+
+                <small>
+                    Total facility consumption over 24 hours
+                </small>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <span>Estimated Energy Cost</span>
+
+                <strong id="estimatedCost">
+                    --
+                </strong>
+
+                <small>
+                    Based on ₹8.00 per kWh
+                </small>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <span>Efficiency Score</span>
+
+                <strong id="efficiencyScore">
+                    --
+                </strong>
+
+                <small>
+                    Calculated from energy operating conditions
+                </small>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <span>Potential Cost Savings</span>
+
+                <strong id="potentialSavings">
+                    --
+                </strong>
+
+                <small>
+                    Estimated optimization opportunity
+                </small>
+
+            </div>
+
+        </section>
+
+
+        <section class="kpis">
+
+            <div class="kpi">
+
+                <span>Average Interval Energy</span>
+
+                <strong id="averageEnergy">
+                    --
+                </strong>
+
+                <small>
+                    Average energy consumed every 15 minutes
+                </small>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <span>Peak Usage</span>
+
+                <strong id="peakEnergy">
+                    --
+                </strong>
+
+                <small>
+                    Highest energy consumption in one 15-minute interval
+                </small>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <span>Potential Carbon Reduction</span>
+
+                <strong id="carbonReduction">
+                    --
+                </strong>
+
+                <small>
+                    Estimated CO₂ reduction from potential savings
+                </small>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <span>Energy Anomalies</span>
+
+                <strong id="anomalyCount">
+                    --
+                </strong>
+
+                <small>
+                    Unusual 15-minute energy readings
+                </small>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+         ENERGY DISTRIBUTION
+         ===================================================== -->
+
+        <section class="card">
+
+            <h2>
+                ⚡ Energy Distribution
+            </h2>
+
+            <p class="chart-description">
+
+                Breakdown of total 24-hour energy consumption
+                by major facility systems.
+
+                Values are shown in kWh and percentage of total energy.
+
+            </p>
+
+            <div id="energyDistribution"></div>
+
+        </section>
+
+
+        <!-- =====================================================
+         BUILDING + HOURLY TREND
+         ===================================================== -->
+
+        <section class="grid two">
+
+
+            <div class="card">
+
+                <h2>
+                    Energy by Building
+                </h2>
+
+                <p class="chart-description">
+
+                    Total energy consumed by each building
+                    during the 24-hour monitoring period.
+
+                    <b>Unit: kWh / 24 hours</b>
+
+                </p>
+
+                <div id="buildingChart" class="bar-chart"></div>
+
+            </div>
+
+
+            <div class="card trend-card">
+
+                <h2>
+                    Hourly Energy Trend
+                </h2>
+
+                <p class="chart-description">
+
+                    Total energy consumed during each hour.
+
+                    Each hour contains four
+                    15-minute readings.
+
+                    <b>Unit: kWh / hour</b>
+
+                </p>
+
+                <div class="trend-wrapper">
+
+                    <svg id="trendChart" viewBox="0 0 760 380" preserveAspectRatio="xMidYMid meet"
+                        aria-label="Hourly energy consumption trend"></svg>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+         ROOM + PEAK
+         ===================================================== -->
+
+        <section class="grid two">
+
+
+            <div class="card">
+
+                <h2>
+                    Energy by Room
+                </h2>
+
+                <p class="chart-description">
+
+                    Total energy consumed by each room
+                    during the 24-hour monitoring period.
+
+                    <b>Unit: kWh / 24 hours</b>
+
+                </p>
+
+                <div id="roomChart" class="bar-chart"></div>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>
+                    Peak Usage
+                </h2>
+
+                <p class="chart-description">
+
+                    Highest energy consumption recorded
+                    during one 15-minute interval.
+
+                    <b>Unit: kWh / 15 min</b>
+
+                </p>
+
+                <div id="peakDetails" class="details"></div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+         ANOMALIES
+         ===================================================== -->
+
+        <section class="card">
+
+            <h2>
+                🚨 Energy Anomalies
+            </h2>
+
+            <p class="chart-description">
+
+                Anomalies are detected when a room's
+                15-minute energy consumption is significantly
+                higher than its normal baseline.
+
+                <br><br>
+
+                <b>
+                    Energy and Baseline:
+                    kWh / 15 min
+                </b>
+
+            </p>
+
+            <div id="anomalies"></div>
+
+        </section>
+
+
+        <!-- =====================================================
+         ENERGY AGENT
+         ===================================================== -->
+
+        <section class="card">
+
+            <h2>
+                🤖 Energy Agent Recommendations
+            </h2>
+
+            <p class="chart-description">
+
+                Recommendations generated by the Energy Agent
+                using occupancy, HVAC, equipment and
+                energy-consumption patterns.
+
+            </p>
+
+            <div id="recommendations"></div>
+
+        </section>
+
+
+    </main>
+
+
+    <!-- =========================================================
+     TOOLTIP
+     ========================================================= -->
+
+    <div id="energyTooltip"></div>
+
+
+    <script src="/static/app.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,336 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+.maintenance-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.page-header h1 {
+  font-size: 30px;
+  margin-bottom: 8px;
+}
+
+.page-header p,
+.panel-header p,
+.kpi-label,
+.data-source {
+  color: #6b7280;
+}
+
+.page-header p {
+  font-size: 14px;
+}
+
+.refresh-button {
+  border: none;
+  background: #2563eb;
+  color: white;
+  padding: 11px 20px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.refresh-button:hover {
+  background: #1d4ed8;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kpi-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kpi-label {
+  font-size: 13px;
+}
+
+.kpi-value {
+  font-size: 27px;
+  font-weight: 700;
+}
+
+.panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.panel-header {
+  margin-bottom: 20px;
+}
+
+.panel-header h2 {
+  font-size: 19px;
+  margin-bottom: 6px;
+}
+
+.panel-header p {
+  font-size: 13px;
+}
+
+.health-distribution {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.health-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.health-card .category {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.health-card .count {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.health-card .percentage {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.health-card.excellent {
+  border-left: 4px solid #16a34a;
+}
+
+.health-card.good {
+  border-left: 4px solid #22c55e;
+}
+
+.health-card.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.health-card.critical {
+  border-left: 4px solid #dc2626;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 350px;
+  padding: 10px 0;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+thead {
+  background: #f9fafb;
+}
+
+th {
+  text-align: left;
+  padding: 13px 12px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+td {
+  padding: 14px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #eef0f3;
+}
+
+tbody tr:hover {
+  background: #f9fafb;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-excellent,
+.status-good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-critical {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.priority-critical {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.priority-high {
+  color: #ea580c;
+  font-weight: 600;
+}
+
+.priority-medium {
+  color: #d97706;
+  font-weight: 600;
+}
+
+.priority-low {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.trend-deteriorating {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.trend-improving {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.trend-stable {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.work-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.status-open {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.work-order-select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 7px 9px;
+  background: white;
+  font-size: 12px;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 25px;
+}
+
+.loading {
+  color: #6b7280;
+}
+
+.empty-state {
+  color: #16a34a;
+}
+
+.data-source {
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 2px 30px;
+}
+
+.data-source strong {
+  color: #374151;
+}
+
+.data-source p {
+  margin-top: 4px;
+}
+
+@media (max-width: 1200px) {
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .maintenance-page {
+    padding: 20px;
+  }
+
+  .health-distribution {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .health-distribution,
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+}
