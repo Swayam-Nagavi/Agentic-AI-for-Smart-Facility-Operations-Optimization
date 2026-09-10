@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Agent</title>
+  <link rel="stylesheet" href="/static/security.css">
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>FacilityOps AI</h2>
+      <p>Agentic Platform</p>
+    </div>
+  
+    <nav class="sidebar-nav">
+      
+  
+      <a href="/" class="nav-item">
+        <span>⚡</span>
+        <span>Energy Agent</span>
+      </a>
+  
+      <a href="/maintenance.html" class="nav-item">
+        <span>🔧</span>
+        <span>Maintenance Agent</span>
+      </a>
+  
+      <a href="/occupancy.html" class="nav-item">
+        <span>👥</span>
+        <span>Occupancy Agent</span>
+      </a>
+  
+      <a href="/security.html" class="nav-item active">
+        <span>🛡️</span>
+        <span>Security Agent</span>
+      </a>
+    </nav>
+  </aside>
+
+  <header class="topbar">
+    <div>
+      <h1>Security Agent</h1>
+      <p>Facility access monitoring and security intelligence</p>
+    </div>
+
+    <a href="/" class="back-btn">← Main Dashboard</a>
+  </header>
+
+  <main class="container">
+
+    <section class="stats-grid">
+
+      <div class="card stat-card">
+        <span>Total Security Events</span>
+        <strong id="totalEvents">-</strong>
+      </div>
+
+      <div class="card stat-card">
+        <span>Unauthorized Access</span>
+        <strong id="unauthorizedEvents">-</strong>
+      </div>
+
+      <div class="card stat-card">
+        <span>High-Risk Events</span>
+        <strong id="highRiskEvents">-</strong>
+      </div>
+
+      <div class="card stat-card">
+        <span>Unauthorized Rate</span>
+        <strong id="unauthorizedRate">-</strong>
+      </div>
+
+    </section>
+
+    <section class="card">
+      <h2>Security Event Severity</h2>
+
+      <div class="severity-grid">
+        <div class="severity low">
+          <span>Low</span>
+          <strong id="lowEvents">0</strong>
+        </div>
+
+        <div class="severity medium">
+          <span>Medium</span>
+          <strong id="mediumEvents">0</strong>
+        </div>
+
+        <div class="severity high">
+          <span>High</span>
+          <strong id="highEvents">0</strong>
+        </div>
+
+        <div class="severity critical">
+          <span>Critical</span>
+          <strong id="criticalEvents">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Security Alerts</h2>
+
+      <div id="alerts">
+        <p>Loading...</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>High-Risk Events</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Facility</th>
+              <th>Event Type</th>
+              <th>Severity</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+
+          <tbody id="highRiskTable">
+            <tr>
+              <td colspan="4">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Security Insights</h2>
+
+      <div id="insights">
+        <p>Loading...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/security.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Occupancy Agent</title>
+  <link rel="stylesheet" href="/static/occupancy.css">
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>FacilityOps AI</h2>
+      <p>Agentic Platform</p>
+    </div>
+  
+    <nav class="sidebar-nav">
+      
+  
+      <a href="/" class="nav-item">
+        <span>⚡</span>
+        <span>Energy Agent</span>
+      </a>
+  
+      <a href="/maintenance.html" class="nav-item">
+        <span>🔧</span>
+        <span>Maintenance Agent</span>
+      </a>
+  
+      <a href="/occupancy.html" class="nav-item active">
+        <span>👥</span>
+        <span>Occupancy Agent</span>
+      </a>
+  
+      <a href="/security.html" class="nav-item">
+        <span>🛡️</span>
+        <span>Security Agent</span>
+      </a>
+    </nav>
+  </aside>
+
+  <header class="topbar">
+    <div>
+      <h1>Occupancy Agent</h1>
+      <p>Facility occupancy monitoring and intelligent analysis</p>
+    </div>
+    <a href="/" class="back-btn">← Main Dashboard</a>
+  </header>
+
+  <main class="container">
+
+    <section class="stats-grid">
+      <div class="card stat-card">
+        <span>Total Records</span>
+        <strong id="totalRecords">-</strong>
+      </div>
+
+      <div class="card stat-card">
+        <span>Total Occupancy</span>
+        <strong id="totalOccupancy">-</strong>
+      </div>
+
+      <div class="card stat-card">
+        <span>Average Occupancy</span>
+        <strong id="averageOccupancy">-</strong>
+      </div>
+
+      <div class="card stat-card">
+        <span>Peak Occupancy</span>
+        <strong id="peakOccupancy">-</strong>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Occupancy Overview</h2>
+
+      <div class="overview-grid">
+        <div>
+          <span class="label">Most Occupied Zone</span>
+          <strong id="mostOccupied">-</strong>
+        </div>
+
+        <div>
+          <span class="label">Least Occupied Zone</span>
+          <strong id="leastOccupied">-</strong>
+        </div>
+
+        <div>
+          <span class="label">Peak Hour</span>
+          <strong id="peakHour">-</strong>
+        </div>
+
+        <div>
+          <span class="label">Peak Zone</span>
+          <strong id="peakZone">-</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Zone Occupancy</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Zone</th>
+              <th>Occupancy</th>
+              <th>Utilization</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="zoneTable">
+            <tr>
+              <td colspan="4">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Capacity Alerts</h2>
+      <div id="capacityAlerts" class="alerts-container">
+        <p>Loading...</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Occupancy Insights</h2>
+      <div id="insights" class="insights-container">
+        <p>Loading...</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Recommendations</h2>
+      <div id="recommendations" class="insights-container">
+        <p>Loading...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/occupancy.js"></script>
+</body>
+
+</html>
