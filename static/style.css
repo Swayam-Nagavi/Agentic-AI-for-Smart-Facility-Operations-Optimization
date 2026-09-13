@@ -648,3 +648,72 @@ tbody tr:hover {
   }
 
 }
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #111827;
+  color: white;
+  padding: 25px 15px;
+  z-index: 1000;
+}
+
+.sidebar-logo {
+  padding: 0 12px 30px;
+  border-bottom: 1px solid #374151;
+}
+
+.sidebar-logo h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.sidebar-logo p {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.sidebar-nav {
+  margin-top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 12px;
+  color: #d1d5db;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.nav-item:hover {
+  background: #1f2937;
+  color: white;
+}
+
+.nav-item.active {
+  background: #374151;
+  color: white;
+}
+
+body {
+  padding-left: 240px;
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 190px;
+  }
+
+  body {
+    padding-left: 190px;
+  }
+}

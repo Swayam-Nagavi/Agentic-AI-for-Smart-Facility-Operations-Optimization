@@ -11,20 +11,32 @@ from src.analytics import (
     detect_anomalies,
     calculate_energy_distribution,
 )
+
 from src.energy_agent import generate_recommendations
 from src.maintenance_agent import build_maintenance_dashboard
+from src.occupancy_agent import OccupancyAgent
 
 
 app = Flask(__name__, static_folder="static")
 
 
-# Assumptions used only for estimated metrics.
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+FACILITY_DATA_PATH = "facility_data.csv"
+
 ELECTRICITY_TARIFF_INR_PER_KWH = 8.0
 GRID_EMISSION_FACTOR_KG_PER_KWH = 0.70
 
 
+# ============================================================
+# ENERGY DASHBOARD
+# ============================================================
+
 def build_dashboard_data():
-    df = load_data("facility_data.csv")
+
+    df = load_data(FACILITY_DATA_PATH)
 
     total = total_energy(df)
     average = average_interval_energy(df)
@@ -38,19 +50,19 @@ def build_dashboard_data():
     # ---------------------------------------------------------
     # Energy distribution
     # ---------------------------------------------------------
+
     distribution = calculate_energy_distribution(df)
 
     # ---------------------------------------------------------
     # Estimated cost
     # ---------------------------------------------------------
+
     estimated_cost = total * ELECTRICITY_TARIFF_INR_PER_KWH
 
     # ---------------------------------------------------------
     # Potential savings
     # ---------------------------------------------------------
-    # Savings are NOT actual measured savings.
-    # They are an estimate based on avoidable HVAC usage
-    # and excess anomaly consumption.
+
     empty_hvac_energy = df.loc[
         (df["occupancy"] == 0)
         & (df["hvac_status"] == "ON"),
@@ -60,9 +72,8 @@ def build_dashboard_data():
     baseline_df = df.copy()
 
     baseline_df["room_baseline"] = (
-        baseline_df.groupby(
-            ["building_id", "room_id"]
-        )["energy_consumption"]
+        baseline_df
+        .groupby(["building_id", "room_id"])["energy_consumption"]
         .transform("mean")
     )
 
@@ -95,6 +106,7 @@ def build_dashboard_data():
     # ---------------------------------------------------------
     # Efficiency score
     # ---------------------------------------------------------
+
     empty_hvac_ratio = (
         empty_hvac_energy / total
         if total > 0
@@ -139,8 +151,9 @@ def build_dashboard_data():
     )
 
     # ---------------------------------------------------------
-    # Potential carbon reduction
+    # Carbon reduction
     # ---------------------------------------------------------
+
     potential_carbon_reduction = (
         potential_savings_kwh
         * GRID_EMISSION_FACTOR_KG_PER_KWH
@@ -149,6 +162,7 @@ def build_dashboard_data():
     # ---------------------------------------------------------
     # Hourly trend
     # ---------------------------------------------------------
+
     hourly = (
         df.set_index("timestamp")
         .groupby("building_id")["energy_consumption"]
@@ -163,29 +177,59 @@ def build_dashboard_data():
     hourly_energy = []
 
     for timestamp in hourly_total.index:
+
         hourly_energy.append({
             "time": timestamp.isoformat(),
+
             "energy": round(
                 float(hourly_total.loc[timestamp]),
                 2,
             ),
+
             "B001": round(
-                float(hourly.get("B001", pd.Series(0, index=hourly.index)).loc[timestamp]),
+                float(
+                    hourly.get(
+                        "B001",
+                        pd.Series(
+                            0,
+                            index=hourly.index,
+                        ),
+                    ).loc[timestamp]
+                ),
                 2,
             ),
+
             "B002": round(
-                float(hourly.get("B002", pd.Series(0, index=hourly.index)).loc[timestamp]),
+                float(
+                    hourly.get(
+                        "B002",
+                        pd.Series(
+                            0,
+                            index=hourly.index,
+                        ),
+                    ).loc[timestamp]
+                ),
                 2,
             ),
+
             "B003": round(
-                float(hourly.get("B003", pd.Series(0, index=hourly.index)).loc[timestamp]),
+                float(
+                    hourly.get(
+                        "B003",
+                        pd.Series(
+                            0,
+                            index=hourly.index,
+                        ),
+                    ).loc[timestamp]
+                ),
                 2,
             ),
         })
 
     # ---------------------------------------------------------
-    # API-friendly building data
+    # Building data
     # ---------------------------------------------------------
+
     building_energy = [
         {
             "building": building,
@@ -195,8 +239,9 @@ def build_dashboard_data():
     ]
 
     # ---------------------------------------------------------
-    # API-friendly room data
+    # Room data
     # ---------------------------------------------------------
+
     room_energy = [
         {
             "label": f"{building} - {room} ({room_type})",
@@ -210,8 +255,9 @@ def build_dashboard_data():
     ]
 
     # ---------------------------------------------------------
-    # API-friendly anomalies
+    # Anomaly data
     # ---------------------------------------------------------
+
     anomaly_data = [
         {
             "building": row["building_id"],
@@ -235,23 +281,28 @@ def build_dashboard_data():
     ]
 
     return {
+
         "kpis": {
             "total_energy": total,
             "average_interval_energy": average,
             "peak_usage": peak["energy"],
             "anomalies": len(anomaly_data),
+
             "estimated_cost": round(
                 estimated_cost,
                 2,
             ),
+
             "potential_cost_savings": round(
                 potential_cost_savings,
                 2,
             ),
+
             "efficiency_score": round(
                 efficiency_score,
                 1,
             ),
+
             "potential_carbon_reduction": round(
                 potential_carbon_reduction,
                 2,
@@ -268,7 +319,9 @@ def build_dashboard_data():
         },
 
         "building_energy": building_energy,
+
         "room_energy": room_energy,
+
         "hourly_energy": hourly_energy,
 
         "peak": peak,
@@ -281,12 +334,463 @@ def build_dashboard_data():
     }
 
 
+# ============================================================
+# OCCUPANCY AGENT
+# ============================================================
+
+def build_occupancy_data():
+    df = load_data(FACILITY_DATA_PATH)
+
+    if df.empty:
+        return {
+            "kpis": {
+                "occupancy_rate": 0,
+                "occupied_rooms": 0,
+                "total_occupancy": 0,
+                "vacant_rooms": 0
+            },
+            "rooms": [],
+            "building_summary": [],
+            "peak_occupancy": None,
+            "peak_hour": None,
+            "most_occupied_zone": None,
+            "least_occupied_zone": None,
+            "insights": ["No occupancy data available."],
+            "capacity_alerts": []
+        }
+
+    # -------------------------------------------------
+    # CURRENT OCCUPANCY
+    # Latest reading for every room
+    # -------------------------------------------------
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    latest = (
+        df.sort_values("timestamp")
+        .groupby(["building_id", "room_id"], as_index=False)
+        .tail(1)
+        .copy()
+    )
+
+    latest["occupancy"] = pd.to_numeric(
+        latest["occupancy"],
+        errors="coerce"
+    ).fillna(0)
+
+    capacity_per_room = 10
+    total_capacity = len(latest) * capacity_per_room
+
+    total_occupancy = int(latest["occupancy"].sum())
+
+    occupied_rooms = int(
+        (latest["occupancy"] > 0).sum()
+    )
+
+    vacant_rooms = len(latest) - occupied_rooms
+
+    occupancy_rate = round(
+        (total_occupancy / total_capacity) * 100,
+        2
+    ) if total_capacity > 0 else 0
+
+    # -------------------------------------------------
+    # ROOM STATUS
+    # -------------------------------------------------
+
+    rooms = []
+
+    for _, row in latest.iterrows():
+
+        occupancy = int(row["occupancy"])
+
+        if occupancy == 0:
+            status = "Vacant"
+        elif occupancy >= capacity_per_room:
+            status = "Critical"
+        elif occupancy >= capacity_per_room * 0.9:
+            status = "Medium"
+        else:
+            status = "Occupied"
+
+        rooms.append({
+            "building_id": row["building_id"],
+            "room_id": row["room_id"],
+            "room_type": row["room_type"],
+            "occupancy": occupancy,
+            "capacity": capacity_per_room,
+            "utilization": round(
+                (occupancy / capacity_per_room) * 100,
+                2
+            ),
+            "status": status,
+            "temperature": round(
+                float(row["temperature"]), 2
+            ),
+            "humidity": round(
+                float(row["humidity"]), 2
+            ),
+            "timestamp": row["timestamp"].isoformat()
+        })
+
+    # -------------------------------------------------
+    # BUILDING SUMMARY
+    # -------------------------------------------------
+
+    building_summary = []
+
+    for building_id, group in latest.groupby("building_id"):
+
+        building_occupancy = int(
+            group["occupancy"].sum()
+        )
+
+        room_count = len(group)
+
+        building_capacity = room_count * capacity_per_room
+
+        building_summary.append({
+            "building_id": building_id,
+            "total_occupancy": building_occupancy,
+            "total_rooms": room_count,
+            "occupied_rooms": int(
+                (group["occupancy"] > 0).sum()
+            ),
+            "occupancy_rate": round(
+                (building_occupancy / building_capacity) * 100,
+                2
+            ) if building_capacity > 0 else 0
+        })
+
+    # -------------------------------------------------
+    # HISTORICAL OCCUPANCY ANALYTICS
+    # Use the Occupancy Agent for peak analysis
+    # -------------------------------------------------
+
+    records = df.to_dict("records")
+
+    occupancy_agent = OccupancyAgent(
+        records=records,
+        capacity_per_zone=capacity_per_room
+    )
+
+    peak = occupancy_agent.get_peak_occupancy()
+    peak_hour = occupancy_agent.get_peak_hour()
+
+    # Historical highest room reading
+    most_occupied_record = max(
+        records,
+        key=lambda r: float(r.get("occupancy", 0) or 0)
+    ) if records else None
+
+    peak_zone = None
+
+    if most_occupied_record:
+        peak_zone = (
+            f"{most_occupied_record.get('building_id')} - "
+            f"{most_occupied_record.get('room_id')}"
+        )
+
+    # -------------------------------------------------
+    # CURRENT ROOM INSIGHTS
+    # -------------------------------------------------
+
+    current_sorted = latest.sort_values(
+        "occupancy",
+        ascending=False
+    )
+
+    most_occupied_room = (
+        current_sorted.iloc[0]
+        if not current_sorted.empty
+        else None
+    )
+
+    least_occupied_room = (
+        current_sorted.iloc[-1]
+        if not current_sorted.empty
+        else None
+    )
+
+    most_occupied_zone = (
+        f"{most_occupied_room['building_id']} - "
+        f"{most_occupied_room['room_id']}"
+        if most_occupied_room is not None
+        else None
+    )
+
+    least_occupied_zone = (
+        f"{least_occupied_room['building_id']} - "
+        f"{least_occupied_room['room_id']}"
+        if least_occupied_room is not None
+        else None
+    )
+
+    # -------------------------------------------------
+    # CAPACITY ALERTS
+    # -------------------------------------------------
+
+    capacity_alerts = []
+
+    for room in rooms:
+
+        if room["utilization"] >= 100:
+
+            capacity_alerts.append({
+                "zone": (
+                    f"{room['building_id']} - "
+                    f"{room['room_id']}"
+                ),
+                "occupancy": room["occupancy"],
+                "capacity": room["capacity"],
+                "utilization": room["utilization"],
+                "severity": "High",
+                "message": (
+                    f"{room['building_id']} - "
+                    f"{room['room_id']} has exceeded "
+                    f"its capacity."
+                )
+            })
+
+        elif room["utilization"] >= 90:
+
+            capacity_alerts.append({
+                "zone": (
+                    f"{room['building_id']} - "
+                    f"{room['room_id']}"
+                ),
+                "occupancy": room["occupancy"],
+                "capacity": room["capacity"],
+                "utilization": room["utilization"],
+                "severity": "Medium",
+                "message": (
+                    f"{room['building_id']} - "
+                    f"{room['room_id']} is nearing capacity."
+                )
+            })
+
+    # -------------------------------------------------
+    # INSIGHTS
+    # -------------------------------------------------
+
+    insights = []
+
+    if total_occupancy == 0:
+        insights.append({
+            "type": "Low Utilization",
+            "severity": "Low",
+            "message": (
+                "All monitored rooms are currently vacant."
+            )
+        })
+
+    elif occupancy_rate < 30:
+        insights.append({
+            "type": "Low Utilization",
+            "severity": "Low",
+            "message": (
+                "Current facility occupancy is relatively low."
+            )
+        })
+
+    else:
+        insights.append({
+            "type": "Occupancy Status",
+            "severity": "Low",
+            "message": (
+                f"Current facility occupancy is "
+                f"{occupancy_rate}%."
+            )
+        })
+
+    if most_occupied_zone:
+        insights.append({
+            "type": "Current Occupancy",
+            "severity": "Low",
+            "message": (
+                f"{most_occupied_zone} is currently "
+                f"the most occupied room."
+            )
+        })
+
+    if peak:
+        insights.append({
+            "type": "Historical Peak",
+            "severity": "Low",
+            "message": (
+                f"Historical peak occupancy was "
+                f"{int(peak['occupancy'])} in "
+                f"{peak['zone']}."
+            )
+        })
+
+    if peak_hour:
+        insights.append({
+            "type": "Peak Hour",
+            "severity": "Low",
+            "message": (
+                f"The busiest observed hour was "
+                f"{peak_hour}."
+            )
+        })
+
+    # -------------------------------------------------
+    # FINAL API RESPONSE
+    # -------------------------------------------------
+
+    return {
+        "data_source": (
+            "Occupancy sensor readings from facility_data.csv"
+        ),
+
+        "note": (
+            "Current occupancy uses the latest available "
+            "room-level sensor reading. Peak metrics use "
+            "historical sensor records."
+        ),
+
+        "kpis": {
+            "occupancy_rate": occupancy_rate,
+            "occupied_rooms": occupied_rooms,
+            "total_occupancy": total_occupancy,
+            "vacant_rooms": vacant_rooms,
+            "total_rooms": len(latest),
+            "total_capacity": total_capacity
+        },
+
+        "peak_occupancy": peak,
+        "peak_hour": peak_hour,
+
+        "most_occupied_zone": most_occupied_zone,
+        "least_occupied_zone": least_occupied_zone,
+
+        "building_summary": building_summary,
+
+        "rooms": rooms,
+
+        "capacity_alerts": capacity_alerts,
+
+        "insights": insights
+    }
+
+
+# ============================================================
+# SECURITY AGENT
+# ============================================================
+
+def build_security_data():
+
+    # Security events are intentionally not generated from
+    # facility sensor data. The current facility dataset does
+    # not contain access-control, CCTV, intrusion, badge,
+    # door, or security-event fields.
+
+    return {
+
+        "available": False,
+
+        "kpis": {
+            "total_events": 0,
+            "active_alerts": 0,
+            "critical_alerts": 0,
+            "resolved_events": 0,
+        },
+
+        "alerts": [],
+
+        "events": [],
+
+        "insights": [],
+
+        "data_source": None,
+
+        "note": (
+            "Security monitoring requires a dedicated security "
+            "event dataset. The current facility_data.csv contains "
+            "facility and occupancy sensor data but no security "
+            "events."
+        ),
+    }
+
+
+# ============================================================
+# MAINTENANCE API
+# ============================================================
+
 @app.route("/api/maintenance/dashboard")
 def maintenance_dashboard_api():
-    return jsonify(build_maintenance_dashboard("facility_data.csv"))
+
+    return jsonify(
+        build_maintenance_dashboard(
+            FACILITY_DATA_PATH
+        )
+    )
+
+
+# ============================================================
+# OCCUPANCY API
+# ============================================================
+
+@app.route("/api/occupancy")
+def occupancy_api():
+
+    return jsonify(
+        build_occupancy_data()
+    )
+
+
+@app.route("/api/occupancy/insights")
+def occupancy_insights_api():
+
+    data = build_occupancy_data()
+
+    return jsonify({
+        "insights": data["insights"],
+        "kpis": data["kpis"],
+    })
+
+
+@app.route("/api/occupancy/rooms")
+def occupancy_rooms_api():
+
+    data = build_occupancy_data()
+
+    return jsonify({
+        "rooms": data["rooms"],
+    })
+
+
+# ============================================================
+# SECURITY APIs
+# ============================================================
+
+@app.route("/api/security")
+def security_api():
+
+    return jsonify(
+        build_security_data()
+    )
+
+
+@app.route("/api/security/alerts")
+def security_alerts_api():
+
+    data = build_security_data()
+
+    return jsonify({
+        "alerts": data["alerts"],
+        "active_alerts": data["kpis"]["active_alerts"],
+        "critical_alerts": data["kpis"]["critical_alerts"],
+    })
+
+
+# ============================================================
+# MAIN DASHBOARD
+# ============================================================
 
 @app.route("/")
 def home():
+
     return send_from_directory(
         "static",
         "index.html",
@@ -295,12 +799,48 @@ def home():
 
 @app.route("/api/dashboard")
 def dashboard_api():
+
     return jsonify(
         build_dashboard_data()
     )
 
 
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
+@app.route("/api/health")
+def health_check():
+
+    return jsonify({
+        "status": "ok",
+        "agents": {
+            "energy": True,
+            "maintenance": True,
+            "occupancy": True,
+            "security": False,
+        },
+    })
+
+@app.route("/maintenance.html")
+def maintenance_page():
+    return send_from_directory("static", "maintenance.html")
+
+
+@app.route("/occupancy.html")
+def occupancy_page():
+    return send_from_directory("static", "occupancy.html")
+
+
+@app.route("/security.html")
+def security_page():
+    return send_from_directory("static", "security.html")
+# ============================================================
+# RUN APPLICATION
+# ============================================================
+
 if __name__ == "__main__":
+
     app.run(
         debug=True
     )
