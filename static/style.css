@@ -515,6 +515,12 @@ tbody tr:hover {
   color: #1f2937;
 }
 
+.alert.critical {
+  border-left: 4px solid #7f1d1d;
+
+  background: #fef2f2;
+}
+
 .alert.high {
   border-left: 4px solid #ef4444;
 

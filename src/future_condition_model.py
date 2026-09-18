@@ -3,6 +3,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import pandas as pd
 
 
 MODEL_PATH = Path("models/future_condition_model.pkl")
@@ -90,7 +91,10 @@ def predict_future_condition(
         for column in FEATURE_COLUMNS
     ]
 
-    features = np.array([values])
+    features = pd.DataFrame(
+        [values],
+        columns=FEATURE_COLUMNS,
+    )
     probabilities = {}
 
     if hasattr(model, "predict_proba"):

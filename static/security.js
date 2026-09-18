@@ -19,6 +19,7 @@ async function loadSecurityDashboard() {
         renderAlerts(data.alerts || []);
         renderHighRiskEvents(data.high_risk_events || []);
         renderInsights(data.insights || []);
+        updateSource(data);
 
     } catch (error) {
 
@@ -268,6 +269,51 @@ function renderInsights(insights) {
         `;
 
     }).join("");
+}
+
+
+// ============================================================
+// DATA SOURCE
+// ============================================================
+
+function updateSource(data) {
+
+    const metadata = data.metadata || {};
+
+    setText(
+        "dataSource",
+        data.data_source || "Live security event stream"
+    );
+
+    const start = metadata.start_timestamp
+        ? formatTimestamp(metadata.start_timestamp)
+        : null;
+
+    const end = metadata.end_timestamp
+        ? formatTimestamp(metadata.end_timestamp)
+        : null;
+
+    setText(
+        "dataPeriod",
+        start && end
+            ? `${start} → ${end}`
+            : "No timestamp range available"
+    );
+
+    setText(
+        "dataNote",
+        data.note || "Only live security events are shown."
+    );
+}
+
+
+function setText(id, value) {
+
+    const element = document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
 }
 
 

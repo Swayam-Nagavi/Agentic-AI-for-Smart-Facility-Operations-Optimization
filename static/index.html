@@ -16,26 +16,32 @@
             <h2>FacilityOps AI</h2>
             <p>Agentic Platform</p>
         </div>
-    
-    
+
+        <nav class="sidebar-nav">
             <a href="/" class="nav-item active">
                 <span>⚡</span>
                 <span>Energy Agent</span>
             </a>
-    
+
             <a href="/maintenance.html" class="nav-item">
                 <span>🔧</span>
                 <span>Maintenance Agent</span>
             </a>
-    
+
             <a href="/occupancy.html" class="nav-item">
                 <span>👥</span>
                 <span>Occupancy Agent</span>
             </a>
-    
+
             <a href="/security.html" class="nav-item">
                 <span>🛡️</span>
                 <span>Security Agent</span>
+            </a>
+
+
+            <a href="/operations.html" class="nav-item">
+                <span>🧠</span>
+                <span>Operations Center</span>
             </a>
         </nav>
     </aside>
@@ -47,7 +53,7 @@
 
             <p>
                 Energy Intelligence & Monitoring
-                • 15-Minute Monitoring Interval
+                • Real-Time Monitoring
             </p>
         </div>
 
@@ -69,15 +75,23 @@
             <strong>Monitoring Configuration</strong>
 
             <span>
-                Sampling Interval: <b>15 minutes</b>
+                Sampling Interval: <b id="samplingInterval">Loading...</b>
             </span>
 
             <span>
-                Energy Unit: <b>kWh per 15-minute interval</b>
+                Energy Unit: <b id="energyUnit">Loading...</b>
             </span>
 
             <span>
-                Dataset: <b>24 hours • 864 records</b>
+                Dataset: <b id="datasetSummary">Loading...</b>
+            </span>
+
+            <span>
+                Source: <b id="dataSource">Live facility sensors</b>
+            </span>
+
+            <span>
+                Period: <b id="monitoringPeriod">Loading...</b>
             </span>
 
         </section>
@@ -103,7 +117,7 @@
                 </strong>
 
                 <small>
-                    Total facility consumption over 24 hours
+                    Total facility consumption in the monitoring period
                 </small>
 
             </div>
@@ -167,7 +181,7 @@
                 </strong>
 
                 <small>
-                    Average energy consumed every 15 minutes
+                    Average energy consumed per reading
                 </small>
 
             </div>
@@ -182,7 +196,7 @@
                 </strong>
 
                 <small>
-                    Highest energy consumption in one 15-minute interval
+                    Highest energy consumption in one reading
                 </small>
 
             </div>
@@ -212,7 +226,7 @@
                 </strong>
 
                 <small>
-                    Unusual 15-minute energy readings
+                    Unusual energy readings
                 </small>
 
             </div>
@@ -232,7 +246,7 @@
 
             <p class="chart-description">
 
-                Breakdown of total 24-hour energy consumption
+                Breakdown of total monitoring period energy consumption
                 by major facility systems.
 
                 Values are shown in kWh and percentage of total energy.
@@ -260,9 +274,9 @@
                 <p class="chart-description">
 
                     Total energy consumed by each building
-                    during the 24-hour monitoring period.
+                    during the monitoring period.
 
-                    <b>Unit: kWh / 24 hours</b>
+                    <b>Unit: kWh / monitoring period</b>
 
                 </p>
 
@@ -282,7 +296,7 @@
                     Total energy consumed during each hour.
 
                     Each hour contains four
-                    15-minute readings.
+                    readings.
 
                     <b>Unit: kWh / hour</b>
 
@@ -316,9 +330,9 @@
                 <p class="chart-description">
 
                     Total energy consumed by each room
-                    during the 24-hour monitoring period.
+                    during the monitoring period.
 
-                    <b>Unit: kWh / 24 hours</b>
+                    <b>Unit: kWh / monitoring period</b>
 
                 </p>
 
@@ -336,9 +350,9 @@
                 <p class="chart-description">
 
                     Highest energy consumption recorded
-                    during one 15-minute interval.
+                    during one reading.
 
-                    <b>Unit: kWh / 15 min</b>
+                    <b>Unit: kWh / reading</b>
 
                 </p>
 
@@ -362,14 +376,14 @@
             <p class="chart-description">
 
                 Anomalies are detected when a room's
-                15-minute energy consumption is significantly
+                Energy consumption is significantly
                 higher than its normal baseline.
 
                 <br><br>
 
                 <b>
                     Energy and Baseline:
-                    kWh / 15 min
+                    kWh / reading
                 </b>
 
             </p>
