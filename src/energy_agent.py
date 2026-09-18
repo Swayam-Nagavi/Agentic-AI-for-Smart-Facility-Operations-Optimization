@@ -1,13 +1,13 @@
 """
 Energy Agent
 ------------
-Agent responsible for energy monitoring, analytics,
-anomaly detection, cost estimation, and generating
-actionable energy-optimisation recommendations.
-
-This module is self-contained.  Its only internal
-dependency is ``src.analytics`` (energy-specific helpers).
+Builds the Energy Intelligence Dashboard from the rows that are present in
+``facility_data.csv``. The agent calculates KPIs, aggregations, anomalies, and
+recommendations from CSV-backed sensor readings only; it does not inject sample
+or fallback facility readings.
 """
+
+from pathlib import Path
 
 import pandas as pd
 
@@ -32,18 +32,135 @@ GRID_EMISSION_FACTOR_KG_PER_KWH = 0.70
 
 
 # ============================================================
-# RECOMMENDATIONS (rule-based)
+# HELPERS
+# ============================================================
+
+def _safe_round(value, digits=2, default=0.0):
+    if pd.isna(value):
+        return default
+
+    try:
+        return round(float(value), digits)
+    except (TypeError, ValueError):
+        return default
+
+
+def _infer_sampling_interval(df):
+    if df.empty or "timestamp" not in df.columns:
+        return None
+
+    timestamps = (
+        pd.Series(df["timestamp"].dropna().unique())
+        .sort_values()
+        .reset_index(drop=True)
+    )
+
+    if len(timestamps) < 2:
+        return None
+
+    deltas = timestamps.diff().dropna()
+
+    if deltas.empty:
+        return None
+
+    minutes = deltas.median().total_seconds() / 60
+
+    if minutes.is_integer():
+        return f"{int(minutes)} minutes"
+
+    return f"{minutes:.1f} minutes"
+
+
+def _build_metadata(df, data_path):
+    path = Path(data_path)
+
+    if df.empty:
+        return {
+            "data_source": path.name,
+            "record_count": 0,
+            "building_ids": [],
+            "room_count": 0,
+            "start_timestamp": None,
+            "end_timestamp": None,
+            "sampling_interval": None,
+            "summary": "No usable CSV rows found",
+        }
+
+    timestamps = df["timestamp"].dropna()
+    start_timestamp = timestamps.min().isoformat() if not timestamps.empty else None
+    end_timestamp = timestamps.max().isoformat() if not timestamps.empty else None
+
+    building_ids = sorted(str(value) for value in df["building_id"].dropna().unique())
+    room_count = int(
+        df[["building_id", "room_id"]]
+        .drop_duplicates()
+        .shape[0]
+    )
+
+    return {
+        "data_source": path.name,
+        "record_count": int(len(df)),
+        "building_ids": building_ids,
+        "room_count": room_count,
+        "start_timestamp": start_timestamp,
+        "end_timestamp": end_timestamp,
+        "sampling_interval": _infer_sampling_interval(df),
+        "summary": f"{len(df)} CSV records • {room_count} rooms • {len(building_ids)} buildings",
+    }
+
+
+def _empty_dashboard(data_path):
+    metadata = _build_metadata(pd.DataFrame(), data_path)
+
+    return {
+        "available": False,
+        "kpis": {
+            "total_energy": 0.0,
+            "average_interval_energy": 0.0,
+            "peak_usage": 0.0,
+            "anomalies": 0,
+            "estimated_cost": 0.0,
+            "potential_cost_savings": 0.0,
+            "efficiency_score": 0.0,
+            "potential_carbon_reduction": 0.0,
+        },
+        "units": {
+            "sampling_interval": "CSV-derived",
+            "interval_energy": "kWh / CSV reading",
+            "hourly_energy": "kWh / hour",
+            "total_energy": "kWh / CSV period",
+            "tariff": "₹8.00 / kWh",
+            "carbon_factor": "0.70 kg CO2 / kWh",
+        },
+        "building_energy": [],
+        "room_energy": [],
+        "hourly_energy": [],
+        "peak": peak_usage(pd.DataFrame()),
+        "anomalies": [],
+        "recommendations": [],
+        "energy_distribution": [],
+        "metadata": metadata,
+        "data_source": metadata["data_source"],
+        "note": "No dashboard values were generated because no usable facility CSV rows were found.",
+    }
+
+
+# ============================================================
+# RECOMMENDATIONS (rule-based, CSV-backed)
 # ============================================================
 
 def generate_recommendations(df):
-    """Generate energy-optimisation recommendations."""
+    """Generate energy-optimisation recommendations from CSV readings."""
+
+    if df.empty:
+        return []
 
     recommendations = []
 
     # 1. HVAC running in empty rooms.
     empty_hvac = df[
         (df["occupancy"] == 0)
-        & (df["hvac_status"] == "ON")
+        & (df["hvac_status"].astype(str).str.upper() == "ON")
     ]
 
     if not empty_hvac.empty:
@@ -54,12 +171,12 @@ def generate_recommendations(df):
             "priority": "Medium",
             "message": (
                 f"HVAC operated during {len(empty_hvac)} "
-                f"unoccupied 15-minute interval(s), using "
+                f"unoccupied CSV reading(s), using "
                 f"approximately {wasted_hvac:.2f} kWh."
             ),
             "reason": (
-                "Cooling an unoccupied room can create "
-                "avoidable energy consumption."
+                "The recommendation is calculated from occupancy, HVAC status, "
+                "and HVAC energy columns in facility_data.csv."
             ),
         })
 
@@ -76,6 +193,7 @@ def generate_recommendations(df):
             )
             .size()
             .reset_index(name="count")
+            .sort_values("count", ascending=False)
         )
 
         for _, row in grouped.head(3).iterrows():
@@ -84,19 +202,18 @@ def generate_recommendations(df):
                 "priority": "High",
                 "message": (
                     f"{row['building_id']} {row['room_id']} "
-                    f"({row['room_type']}) repeatedly exceeded "
-                    f"its HVAC setpoint."
+                    f"({row['room_type']}) exceeded its HVAC setpoint "
+                    f"in {int(row['count'])} CSV reading(s)."
                 ),
                 "reason": (
-                    "Temperature above the intended setpoint "
-                    "while occupied may indicate cooling demand "
-                    "or HVAC performance issues."
+                    "The recommendation is calculated from temperature, "
+                    "occupancy, and HVAC setpoint readings in facility_data.csv."
                 ),
             })
 
     # 3. Equipment warnings.
     equipment_warnings = df[
-        df["equipment_status"] == "Warning"
+        df["equipment_status"].astype(str).str.lower() == "warning"
     ]
 
     if not equipment_warnings.empty:
@@ -106,11 +223,12 @@ def generate_recommendations(df):
                 "priority": "High",
                 "message": (
                     f"{row['building_id']} {row['room_id']} "
-                    f"({row['room_type']}) reported an equipment warning."
+                    f"({row['room_type']}) reported an equipment warning "
+                    f"at {row['timestamp']}."
                 ),
                 "reason": (
-                    "An equipment warning can indicate abnormal "
-                    "operation or an unexpected energy load."
+                    "The recommendation is generated only when the CSV "
+                    "equipment_status column contains Warning."
                 ),
             })
 
@@ -133,27 +251,12 @@ def generate_recommendations(df):
             "type": "High Consumption",
             "priority": "Medium",
             "message": (
-                f"{building} {room} ({room_type}) has the "
-                f"highest 24-hour consumption at {energy:.2f} kWh."
+                f"{building} {room} ({room_type}) has the highest CSV-period "
+                f"consumption at {energy:.2f} kWh."
             ),
             "reason": (
-                "The room is the largest energy consumer in "
-                "the monitored facility and should be investigated "
-                "for HVAC, equipment and operating-schedule optimization."
-            ),
-        })
-
-    if not recommendations:
-        recommendations.append({
-            "type": "No Action Required",
-            "priority": "Low",
-            "message": (
-                "No significant optimization opportunity "
-                "was detected in the current monitoring period."
-            ),
-            "reason": (
-                "Energy, occupancy, HVAC and equipment patterns "
-                "are within the configured monitoring thresholds."
+                "This is the largest room-level sum of the energy_consumption "
+                "column in facility_data.csv."
             ),
         })
 
@@ -166,21 +269,15 @@ def generate_recommendations(df):
 
 def build_energy_dashboard(data_path):
     """
-    Build the complete energy dashboard response.
-
-    Parameters
-    ----------
-    data_path : str
-        Path to the facility CSV data file.
-
-    Returns
-    -------
-    dict
-        JSON-ready dictionary with KPIs, charts, anomalies,
-        and recommendations.
+    Build the complete energy dashboard response from facility CSV rows.
     """
 
     df = load_data(data_path)
+
+    if df.empty:
+        return _empty_dashboard(data_path)
+
+    metadata = _build_metadata(df, data_path)
 
     total = total_energy(df)
     average = average_interval_energy(df)
@@ -191,25 +288,13 @@ def build_energy_dashboard(data_path):
     anomalies = detect_anomalies(df)
     recommendations = generate_recommendations(df)
 
-    # ---------------------------------------------------------
-    # Energy distribution
-    # ---------------------------------------------------------
-
     distribution = calculate_energy_distribution(df)
-
-    # ---------------------------------------------------------
-    # Estimated cost
-    # ---------------------------------------------------------
 
     estimated_cost = total * ELECTRICITY_TARIFF_INR_PER_KWH
 
-    # ---------------------------------------------------------
-    # Potential savings
-    # ---------------------------------------------------------
-
     empty_hvac_energy = df.loc[
         (df["occupancy"] == 0)
-        & (df["hvac_status"] == "ON"),
+        & (df["hvac_status"].astype(str).str.upper() == "ON"),
         "hvac_energy",
     ].sum()
 
@@ -242,42 +327,18 @@ def build_energy_dashboard(data_path):
         total * 0.20,
     )
 
-    potential_cost_savings = (
-        potential_savings_kwh
-        * ELECTRICITY_TARIFF_INR_PER_KWH
-    )
+    potential_cost_savings = potential_savings_kwh * ELECTRICITY_TARIFF_INR_PER_KWH
 
-    # ---------------------------------------------------------
-    # Efficiency score
-    # ---------------------------------------------------------
-
-    empty_hvac_ratio = (
-        empty_hvac_energy / total
-        if total > 0
-        else 0
-    )
-
-    anomaly_ratio = (
-        anomaly_excess / total
-        if total > 0
-        else 0
-    )
-
+    empty_hvac_ratio = empty_hvac_energy / total if total > 0 else 0
+    anomaly_ratio = anomaly_excess / total if total > 0 else 0
     warning_ratio = (
-        len(df[df["equipment_status"] == "Warning"])
+        len(df[df["equipment_status"].astype(str).str.lower() == "warning"])
         / len(df)
         if len(df) > 0
         else 0
     )
-
     hot_ratio = (
-        len(
-            df[
-                df["temperature"]
-                > df["hvac_setpoint"] + 1.5
-            ]
-        )
-        / len(df)
+        len(df[df["temperature"] > df["hvac_setpoint"] + 1.5]) / len(df)
         if len(df) > 0
         else 0
     )
@@ -288,24 +349,9 @@ def build_energy_dashboard(data_path):
         + warning_ratio * 10
         + hot_ratio * 20
     )
+    efficiency_score = max(0, min(100, efficiency_score))
 
-    efficiency_score = max(
-        0,
-        min(100, efficiency_score),
-    )
-
-    # ---------------------------------------------------------
-    # Carbon reduction
-    # ---------------------------------------------------------
-
-    potential_carbon_reduction = (
-        potential_savings_kwh
-        * GRID_EMISSION_FACTOR_KG_PER_KWH
-    )
-
-    # ---------------------------------------------------------
-    # Hourly trend
-    # ---------------------------------------------------------
+    potential_carbon_reduction = potential_savings_kwh * GRID_EMISSION_FACTOR_KG_PER_KWH
 
     hourly = (
         df.set_index("timestamp")
@@ -317,27 +363,21 @@ def build_energy_dashboard(data_path):
     )
 
     hourly_total = hourly.sum(axis=1)
-
-    # Dynamically pick up whatever building IDs exist.
-    building_ids = sorted(buildings.keys())
+    building_ids = metadata["building_ids"]
 
     hourly_energy = []
 
     for timestamp in hourly_total.index:
-
         entry = {
             "time": timestamp.isoformat(),
-            "energy": round(
-                float(hourly_total.loc[timestamp]),
-                2,
-            ),
+            "energy": round(float(hourly_total.loc[timestamp]), 2),
         }
 
-        for bid in building_ids:
-            entry[bid] = round(
+        for building_id in building_ids:
+            entry[building_id] = round(
                 float(
                     hourly.get(
-                        bid,
+                        building_id,
                         pd.Series(0, index=hourly.index),
                     ).loc[timestamp]
                 ),
@@ -346,109 +386,70 @@ def build_energy_dashboard(data_path):
 
         hourly_energy.append(entry)
 
-    # ---------------------------------------------------------
-    # Building data
-    # ---------------------------------------------------------
-
     building_energy = [
         {
-            "building": building,
+            "building": str(building),
             "energy": round(float(energy), 2),
         }
         for building, energy in buildings.items()
     ]
 
-    # ---------------------------------------------------------
-    # Room data
-    # ---------------------------------------------------------
-
     room_energy = [
         {
             "label": f"{building} - {room} ({room_type})",
-            "building": building,
-            "room": room,
-            "room_type": room_type,
+            "building": str(building),
+            "room": str(room),
+            "room_type": str(room_type),
             "energy": round(float(energy), 2),
         }
         for (building, room, room_type), energy
         in rooms.items()
     ]
 
-    # ---------------------------------------------------------
-    # Anomaly data
-    # ---------------------------------------------------------
-
     anomaly_data = [
         {
-            "building": row["building_id"],
-            "room": row["room_id"],
-            "room_type": row["room_type"],
-            "timestamp": str(row["timestamp"]),
-            "energy": round(
-                float(row["energy_consumption"]),
-                3,
-            ),
-            "baseline": round(
-                float(row["baseline"]),
-                3,
-            ),
-            "above_baseline": round(
-                float(row["baseline_difference_pct"]),
-                1,
-            ),
+            "building": str(row["building_id"]),
+            "room": str(row["room_id"]),
+            "room_type": str(row["room_type"]),
+            "timestamp": row["timestamp"].isoformat(),
+            "energy": _safe_round(row["energy_consumption"], 3),
+            "baseline": _safe_round(row["baseline"], 3),
+            "above_baseline": _safe_round(row["baseline_difference_pct"], 1),
         }
         for _, row in anomalies.iterrows()
     ]
 
     return {
-
+        "available": True,
         "kpis": {
             "total_energy": total,
             "average_interval_energy": average,
             "peak_usage": peak["energy"],
             "anomalies": len(anomaly_data),
-
-            "estimated_cost": round(
-                estimated_cost,
-                2,
-            ),
-
-            "potential_cost_savings": round(
-                potential_cost_savings,
-                2,
-            ),
-
-            "efficiency_score": round(
-                efficiency_score,
-                1,
-            ),
-
-            "potential_carbon_reduction": round(
-                potential_carbon_reduction,
-                2,
-            ),
+            "estimated_cost": round(estimated_cost, 2),
+            "potential_cost_savings": round(potential_cost_savings, 2),
+            "efficiency_score": round(efficiency_score, 1),
+            "potential_carbon_reduction": round(potential_carbon_reduction, 2),
         },
-
         "units": {
-            "sampling_interval": "15 minutes",
-            "interval_energy": "kWh / 15 min",
+            "sampling_interval": metadata["sampling_interval"] or "CSV-derived",
+            "interval_energy": "kWh / CSV reading",
             "hourly_energy": "kWh / hour",
-            "total_energy": "kWh / 24 hours",
-            "tariff": "\u20b98.00 / kWh",
+            "total_energy": "kWh / CSV period",
+            "tariff": "₹8.00 / kWh",
             "carbon_factor": "0.70 kg CO2 / kWh",
         },
-
         "building_energy": building_energy,
-
         "room_energy": room_energy,
-
         "hourly_energy": hourly_energy,
-
         "peak": peak,
-
         "anomalies": anomaly_data,
-
         "recommendations": recommendations,
-
         "energy_distribution": distribution,
+        "metadata": metadata,
+        "data_source": metadata["data_source"],
+        "note": (
+            f"Dashboard values are calculated from {metadata['data_source']} rows only. "
+            "No hardcoded building readings or generated fallback readings are injected."
+        ),
     }

@@ -17,7 +17,7 @@
             <p>Agentic Platform</p>
         </div>
     
-    
+        <nav class="sidebar-nav">
             <a href="/" class="nav-item active">
                 <span>⚡</span>
                 <span>Energy Agent</span>
@@ -47,7 +47,7 @@
 
             <p>
                 Energy Intelligence & Monitoring
-                • 15-Minute Monitoring Interval
+                • CSV-backed Monitoring
             </p>
         </div>
 
@@ -69,15 +69,23 @@
             <strong>Monitoring Configuration</strong>
 
             <span>
-                Sampling Interval: <b>15 minutes</b>
+                Sampling Interval: <b id="samplingInterval">Loading CSV...</b>
             </span>
 
             <span>
-                Energy Unit: <b>kWh per 15-minute interval</b>
+                Energy Unit: <b id="energyUnit">Loading CSV...</b>
             </span>
 
             <span>
-                Dataset: <b>24 hours • 864 records</b>
+                Dataset: <b id="datasetSummary">Loading CSV...</b>
+            </span>
+
+            <span>
+                Source: <b id="dataSource">facility_data.csv</b>
+            </span>
+
+            <span>
+                Period: <b id="monitoringPeriod">Loading CSV...</b>
             </span>
 
         </section>
@@ -103,7 +111,7 @@
                 </strong>
 
                 <small>
-                    Total facility consumption over 24 hours
+                    Total facility consumption in the CSV period
                 </small>
 
             </div>
@@ -167,7 +175,7 @@
                 </strong>
 
                 <small>
-                    Average energy consumed every 15 minutes
+                    Average energy consumed per CSV reading
                 </small>
 
             </div>
@@ -182,7 +190,7 @@
                 </strong>
 
                 <small>
-                    Highest energy consumption in one 15-minute interval
+                    Highest energy consumption in one CSV reading
                 </small>
 
             </div>
@@ -212,7 +220,7 @@
                 </strong>
 
                 <small>
-                    Unusual 15-minute energy readings
+                    Unusual CSV energy readings
                 </small>
 
             </div>
@@ -232,7 +240,7 @@
 
             <p class="chart-description">
 
-                Breakdown of total 24-hour energy consumption
+                Breakdown of total CSV-period energy consumption
                 by major facility systems.
 
                 Values are shown in kWh and percentage of total energy.
@@ -260,9 +268,9 @@
                 <p class="chart-description">
 
                     Total energy consumed by each building
-                    during the 24-hour monitoring period.
+                    during the CSV monitoring period.
 
-                    <b>Unit: kWh / 24 hours</b>
+                    <b>Unit: kWh / CSV period</b>
 
                 </p>
 
@@ -282,7 +290,7 @@
                     Total energy consumed during each hour.
 
                     Each hour contains four
-                    15-minute readings.
+                    CSV readings.
 
                     <b>Unit: kWh / hour</b>
 
@@ -316,9 +324,9 @@
                 <p class="chart-description">
 
                     Total energy consumed by each room
-                    during the 24-hour monitoring period.
+                    during the CSV monitoring period.
 
-                    <b>Unit: kWh / 24 hours</b>
+                    <b>Unit: kWh / CSV period</b>
 
                 </p>
 
@@ -336,9 +344,9 @@
                 <p class="chart-description">
 
                     Highest energy consumption recorded
-                    during one 15-minute interval.
+                    during one CSV reading.
 
-                    <b>Unit: kWh / 15 min</b>
+                    <b>Unit: kWh / CSV reading</b>
 
                 </p>
 
@@ -362,14 +370,14 @@
             <p class="chart-description">
 
                 Anomalies are detected when a room's
-                15-minute energy consumption is significantly
+                CSV energy consumption is significantly
                 higher than its normal baseline.
 
                 <br><br>
 
                 <b>
                     Energy and Baseline:
-                    kWh / 15 min
+                    kWh / CSV reading
                 </b>
 
             </p>

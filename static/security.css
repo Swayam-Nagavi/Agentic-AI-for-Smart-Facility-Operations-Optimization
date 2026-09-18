@@ -61,6 +61,21 @@ body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
+.data-source {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 18px 0 8px;
+}
+
+.data-source strong {
+  color: #1f2937;
+}
+
+.data-source p {
+  margin-top: 4px;
+}
+
 .stat-card {
   display: flex;
   flex-direction: column;

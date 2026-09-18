@@ -350,7 +350,9 @@ function updateFutureConditionChart(
 
         Stable: 0,
 
-        Deteriorating: 0
+        Deteriorating: 0,
+
+        Unavailable: 0
     };
 
 
@@ -394,7 +396,8 @@ function updateFutureConditionChart(
                     labels: [
                         "Improving",
                         "Stable",
-                        "Deteriorating"
+                        "Deteriorating",
+                        "Unavailable"
                     ],
 
                     datasets: [
@@ -406,7 +409,8 @@ function updateFutureConditionChart(
                             data: [
                                 counts.Improving,
                                 counts.Stable,
-                                counts.Deteriorating
+                                counts.Deteriorating,
+                                counts.Unavailable
                             ],
 
                             borderWidth: 1
@@ -576,14 +580,7 @@ function updateSchedule(
     tbody.innerHTML =
         schedule.map(asset => {
 
-            const key =
-                `maintenance-work-order-${asset.asset_id}`;
-
-
-            const status =
-                localStorage.getItem(key)
-                || "Open";
-
+            const status = asset.work_order_status || "CSV action required";
 
             return `
                 <tr>
@@ -615,47 +612,7 @@ function updateSchedule(
                     </td>
 
                     <td>
-
-                        <select
-                            data-key="${escapeHtml(key)}"
-                            onchange="saveWorkOrder(this)"
-                        >
-
-                            <option
-                                value="Open"
-                                ${
-                                    status === "Open"
-                                    ? "selected"
-                                    : ""
-                                }
-                            >
-                                Open
-                            </option>
-
-                            <option
-                                value="In Progress"
-                                ${
-                                    status === "In Progress"
-                                    ? "selected"
-                                    : ""
-                                }
-                            >
-                                In Progress
-                            </option>
-
-                            <option
-                                value="Completed"
-                                ${
-                                    status === "Completed"
-                                    ? "selected"
-                                    : ""
-                                }
-                            >
-                                Completed
-                            </option>
-
-                        </select>
-
+                        ${escapeHtml(status)}
                     </td>
 
                 </tr>
@@ -786,14 +743,7 @@ function updateWorkOrders(
     tbody.innerHTML =
         schedule.map(asset => {
 
-            const key =
-                `maintenance-work-order-${asset.asset_id}`;
-
-
-            const status =
-                localStorage.getItem(key)
-                || "Open";
-
+            const status = asset.work_order_status || "CSV action required";
 
             return `
                 <tr>
@@ -818,68 +768,13 @@ function updateWorkOrders(
                     </td>
 
                     <td>
-
-                        <select
-                            data-key="${escapeHtml(key)}"
-                            onchange="saveWorkOrder(this)"
-                        >
-
-                            <option
-                                value="Open"
-                                ${
-                                    status === "Open"
-                                    ? "selected"
-                                    : ""
-                                }
-                            >
-                                Open
-                            </option>
-
-                            <option
-                                value="In Progress"
-                                ${
-                                    status === "In Progress"
-                                    ? "selected"
-                                    : ""
-                                }
-                            >
-                                In Progress
-                            </option>
-
-                            <option
-                                value="Completed"
-                                ${
-                                    status === "Completed"
-                                    ? "selected"
-                                    : ""
-                                }
-                            >
-                                Completed
-                            </option>
-
-                        </select>
-
+                        ${escapeHtml(status)}
                     </td>
 
                 </tr>
             `;
 
         }).join("");
-}
-
-
-/* =========================================================
-   WORK ORDER STATUS
-========================================================= */
-
-function saveWorkOrder(
-    select
-) {
-
-    localStorage.setItem(
-        select.dataset.key,
-        select.value
-    );
 }
 
 
@@ -896,7 +791,7 @@ function updateSource(
         "dataSource",
 
         source ||
-        "Facility sensor data from facility_data.csv"
+        "Facility sensor readings loaded from facility_data.csv"
     );
 
 
@@ -904,7 +799,7 @@ function updateSource(
         "dataNote",
 
         note ||
-        "Future condition is predicted using a Random Forest model trained on historical facility sensor readings."
+        "Only CSV-backed facility readings are used for maintenance health, alerts, and actions."
     );
 }
 

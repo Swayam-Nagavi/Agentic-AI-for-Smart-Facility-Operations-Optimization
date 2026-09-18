@@ -55,6 +55,15 @@ Open:
 - Energy dashboard: `http://127.0.0.1:5000/`
 - Predictive maintenance dashboard: `http://127.0.0.1:5000/static/maintenance.html`
 
+## Dashboard data-source policy
+
+The dashboards read from the CSV files in the project root. The Energy,
+Occupancy, and Maintenance dashboards use `facility_data.csv`; the Security
+dashboard uses `security_events.csv`. If either CSV file is missing, empty, or
+has no usable rows, the application first writes generated rows into that CSV
+file and then renders the dashboard from the CSV contents. Existing usable CSV
+data is not overwritten.
+
 ## How the Maintenance Agent works
 
 1. Reads the existing `facility_data.csv`.

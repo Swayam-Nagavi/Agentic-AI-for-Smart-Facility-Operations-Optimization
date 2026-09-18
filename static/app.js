@@ -1,128 +1,76 @@
 async function loadDashboard() {
-
     try {
-
-        const response =
-            await fetch("/api/dashboard");
-
+        const response = await fetch("/api/dashboard");
 
         if (!response.ok) {
-
-            throw new Error(
-                "Dashboard API request failed"
-            );
-
+            throw new Error(`Dashboard API request failed: ${response.status}`);
         }
 
+        const data = await response.json();
+        const buildingIds = getBuildingIds(data);
 
-        const data =
-            await response.json();
-
-
-        // =====================================================
-        // KPI VALUES
-        // =====================================================
-
-        document.getElementById(
-            "totalEnergy"
-        ).textContent =
-            `${data.kpis.total_energy.toFixed(2)} kWh`;
-
-
-        document.getElementById(
-            "estimatedCost"
-        ).textContent =
-            `₹${data.kpis.estimated_cost.toFixed(2)}`;
-
-
-        document.getElementById(
-            "efficiencyScore"
-        ).textContent =
-            `${data.kpis.efficiency_score.toFixed(0)}%`;
-
-
-        document.getElementById(
-            "potentialSavings"
-        ).textContent =
-            `₹${data.kpis.potential_cost_savings.toFixed(2)}`;
-
-
-        document.getElementById(
-            "averageEnergy"
-        ).textContent =
-            `${data.kpis.average_interval_energy.toFixed(2)} kWh / 15 min`;
-
-
-        document.getElementById(
-            "peakEnergy"
-        ).textContent =
-            `${data.kpis.peak_usage.toFixed(2)} kWh / 15 min`;
-
-
-        document.getElementById(
-            "carbonReduction"
-        ).textContent =
-            `${data.kpis.potential_carbon_reduction.toFixed(2)} kg CO₂`;
-
-
-        document.getElementById(
-            "anomalyCount"
-        ).textContent =
-            data.kpis.anomalies;
-
-
-        // =====================================================
-        // RENDER DASHBOARD COMPONENTS
-        // =====================================================
-
-        renderDistribution(
-            data.energy_distribution
-        );
-
-
-        renderBars(
-            "buildingChart",
-            data.building_energy,
-            "building"
-        );
-
-
-        renderBars(
-            "roomChart",
-            data.room_energy,
-            "label"
-        );
-
-
-        renderTrend(
-            data.hourly_energy
-        );
-
-
-        renderPeak(
-            data.peak
-        );
-
-
-        renderAnomalies(
-            data.anomalies
-        );
-
-
-        renderRecommendations(
-            data.recommendations
-        );
-
-
+        updateDataInfo(data, buildingIds);
+        updateKPIs(data.kpis || {});
+        renderDistribution(data.energy_distribution || []);
+        renderBars("buildingChart", data.building_energy || [], "building");
+        renderBars("roomChart", data.room_energy || [], "label");
+        renderTrend(data.hourly_energy || [], buildingIds);
+        renderPeak(data.peak || {});
+        renderAnomalies(data.anomalies || []);
+        renderRecommendations(data.recommendations || []);
     } catch (error) {
+        console.error("Dashboard error:", error);
+        showDashboardError();
+    }
+}
 
-        console.error(
-            "Dashboard error:",
-            error
-        );
 
+/* =========================================================
+   DATA SOURCE / METADATA
+   ========================================================= */
+
+function updateDataInfo(data, buildingIds) {
+    const metadata = data.metadata || {};
+    const units = data.units || {};
+
+    setText("samplingInterval", units.sampling_interval || metadata.sampling_interval || "CSV-derived");
+    setText("energyUnit", units.interval_energy || "kWh / CSV reading");
+
+    const source = data.data_source || metadata.data_source || "facility_data.csv";
+    const recordCount = Number(metadata.record_count || 0);
+    const roomCount = Number(metadata.room_count || 0);
+    const buildingCount = buildingIds.length;
+
+    const parts = [
+        `${recordCount} CSV record${recordCount === 1 ? "" : "s"}`,
+    ];
+
+    if (roomCount) {
+        parts.push(`${roomCount} room${roomCount === 1 ? "" : "s"}`);
     }
 
+    if (buildingCount) {
+        parts.push(`${buildingCount} building${buildingCount === 1 ? "" : "s"}`);
+    }
+
+    setText("datasetSummary", parts.join(" • "));
+    setText("dataSource", source);
+
+    const start = metadata.start_timestamp ? formatDate(metadata.start_timestamp) : null;
+    const end = metadata.end_timestamp ? formatDate(metadata.end_timestamp) : null;
+    setText("monitoringPeriod", start && end ? `${start} → ${end}` : "No CSV timestamp range available");
+}
+
+
+function updateKPIs(kpis) {
+    setText("totalEnergy", `${toNumber(kpis.total_energy).toFixed(2)} kWh`);
+    setText("estimatedCost", `₹${toNumber(kpis.estimated_cost).toFixed(2)}`);
+    setText("efficiencyScore", `${toNumber(kpis.efficiency_score).toFixed(0)}%`);
+    setText("potentialSavings", `₹${toNumber(kpis.potential_cost_savings).toFixed(2)}`);
+    setText("averageEnergy", `${toNumber(kpis.average_interval_energy).toFixed(2)} kWh / CSV reading`);
+    setText("peakEnergy", `${toNumber(kpis.peak_usage).toFixed(2)} kWh / CSV reading`);
+    setText("carbonReduction", `${toNumber(kpis.potential_carbon_reduction).toFixed(2)} kg CO₂`);
+    setText("anomalyCount", kpis.anomalies ?? 0);
 }
 
 
@@ -131,138 +79,50 @@ async function loadDashboard() {
    ========================================================= */
 
 function renderDistribution(items) {
+    const container = document.getElementById("energyDistribution");
 
-    const container =
-        document.getElementById(
-            "energyDistribution"
-        );
-
+    if (!container) {
+        return;
+    }
 
     container.innerHTML = "";
 
-
-    if (
-        !items ||
-        items.length === 0
-    ) {
-
-        container.innerHTML =
-            '<p class="muted">No energy distribution data available.</p>';
-
+    if (!items.length) {
+        container.innerHTML = '<p class="muted">No CSV energy distribution data available.</p>';
         return;
-
     }
 
-
     items.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "distribution-row";
 
-        const row =
-            document.createElement(
-                "div"
-            );
+        const top = document.createElement("div");
+        top.className = "distribution-top";
 
-        row.className =
-            "distribution-row";
+        const label = document.createElement("span");
+        label.textContent = item.category || "Unknown";
 
+        const percentage = document.createElement("span");
+        percentage.textContent = `${toNumber(item.percentage).toFixed(1)}%`;
 
-        // -----------------------------
-        // Category + percentage
-        // -----------------------------
+        top.append(label, percentage);
 
-        const top =
-            document.createElement(
-                "div"
-            );
+        const track = document.createElement("div");
+        track.className = "distribution-track";
 
-        top.className =
-            "distribution-top";
+        const bar = document.createElement("div");
+        bar.className = "distribution-bar";
+        bar.style.width = `${Math.max(0, Math.min(100, toNumber(item.percentage)))}%`;
 
+        track.appendChild(bar);
 
-        const label =
-            document.createElement(
-                "span"
-            );
+        const value = document.createElement("div");
+        value.className = "distribution-value";
+        value.textContent = `${toNumber(item.energy).toFixed(2)} kWh / CSV period`;
 
-        label.textContent =
-            item.category;
-
-
-        const percentage =
-            document.createElement(
-                "span"
-            );
-
-        percentage.textContent =
-            `${item.percentage.toFixed(1)}%`;
-
-
-        top.append(
-            label,
-            percentage
-        );
-
-
-        // -----------------------------
-        // Progress bar
-        // -----------------------------
-
-        const track =
-            document.createElement(
-                "div"
-            );
-
-        track.className =
-            "distribution-track";
-
-
-        const bar =
-            document.createElement(
-                "div"
-            );
-
-        bar.className =
-            "distribution-bar";
-
-
-        bar.style.width =
-            `${item.percentage}%`;
-
-
-        track.appendChild(
-            bar
-        );
-
-
-        // -----------------------------
-        // Energy value
-        // -----------------------------
-
-        const value =
-            document.createElement(
-                "div"
-            );
-
-        value.className =
-            "distribution-value";
-
-
-        value.textContent =
-            `${item.energy.toFixed(2)} kWh / 24 hours`;
-
-
-        row.append(
-            top,
-            track,
-            value
-        );
-
-
-        container.appendChild(
-            row
-        );
-
+        row.append(top, track, value);
+        container.appendChild(row);
     });
-
 }
 
 
@@ -270,155 +130,43 @@ function renderDistribution(items) {
    BUILDING / ROOM BAR CHARTS
    ========================================================= */
 
-function renderBars(
-    elementId,
-    items,
-    labelKey
-) {
+function renderBars(elementId, items, labelKey) {
+    const container = document.getElementById(elementId);
 
-    const container =
-        document.getElementById(
-            elementId
-        );
-
+    if (!container) {
+        return;
+    }
 
     container.innerHTML = "";
 
-
-    if (
-        !items ||
-        items.length === 0
-    ) {
-
-        container.innerHTML =
-            '<p class="muted">No data available.</p>';
-
+    if (!items.length) {
+        container.innerHTML = '<p class="muted">No CSV data available.</p>';
         return;
-
     }
 
-
-    const max =
-        Math.max(
-            ...items.map(
-                item => item.energy
-            ),
-            1
-        );
-
+    const max = Math.max(...items.map(item => toNumber(item.energy)), 1);
 
     items.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
 
-        const row =
-            document.createElement(
-                "div"
-            );
+        const label = document.createElement("span");
+        label.textContent = item[labelKey] || "Unknown";
 
-        row.className =
-            "bar-row";
+        const track = document.createElement("div");
+        track.className = "bar-track";
 
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.width = `${(toNumber(item.energy) / max) * 100}%`;
 
-        // -----------------------------
-        // Label
-        // -----------------------------
+        const value = document.createElement("span");
+        value.textContent = `${toNumber(item.energy).toFixed(2)} kWh`;
 
-        const label =
-            document.createElement(
-                "span"
-            );
-
-
-        if (
-            labelKey === "label"
-        ) {
-
-            const parts =
-                item[labelKey].split(
-                    " ("
-                );
-
-
-            if (
-                parts.length > 1
-            ) {
-
-                label.innerHTML = `
-                    ${parts[0]}<br>
-                    (${parts[1]}
-                `;
-
-            } else {
-
-                label.textContent =
-                    item[labelKey];
-
-            }
-
-        } else {
-
-            label.textContent =
-                item[labelKey];
-
-        }
-
-
-        // -----------------------------
-        // Bar
-        // -----------------------------
-
-        const track =
-            document.createElement(
-                "div"
-            );
-
-        track.className =
-            "bar-track";
-
-
-        const bar =
-            document.createElement(
-                "div"
-            );
-
-        bar.className =
-            "bar";
-
-
-        bar.style.width =
-            `${(item.energy / max) * 100}%`;
-
-
-        // -----------------------------
-        // Value
-        // -----------------------------
-
-        const value =
-            document.createElement(
-                "span"
-            );
-
-        value.textContent =
-            `${item.energy.toFixed(2)} kWh`;
-
-
-        track.appendChild(
-            bar
-        );
-
-
-        row.append(
-            label,
-            track,
-            value
-        );
-
-
-        container.appendChild(
-            row
-        );
-
+        track.appendChild(bar);
+        row.append(label, track, value);
+        container.appendChild(row);
     });
-
 }
 
 
@@ -426,706 +174,181 @@ function renderBars(
    HOURLY ENERGY TREND
    ========================================================= */
 
-function renderTrend(items) {
+function renderTrend(items, buildingIds) {
+    const svg = document.getElementById("trendChart");
+    const tooltip = document.getElementById("energyTooltip");
 
-    const svg =
-        document.getElementById(
-            "trendChart"
-        );
-
-
-    const tooltip =
-        document.getElementById(
-            "energyTooltip"
-        );
-
+    if (!svg) {
+        return;
+    }
 
     svg.innerHTML = "";
 
-
-    if (
-        !items ||
-        !items.length
-    ) {
-
+    if (!items.length) {
+        const message = createSvgElement("text", {
+            x: 30,
+            y: 40,
+            "font-size": 14,
+            fill: "#64748b",
+        });
+        message.textContent = "No hourly CSV energy data available.";
+        svg.appendChild(message);
         return;
-
     }
-
 
     const width = 760;
     const height = 380;
-
-
     const left = 65;
     const right = 25;
     const top = 25;
     const bottom = 75;
-
-
-    const chartWidth =
-        width - left - right;
-
-
-    const chartHeight =
-        height - top - bottom;
-
-
-    const maxEnergy =
-        Math.max(
-            ...items.map(
-                item => item.energy
-            )
-        );
-
-
-    const max =
-        Math.max(
-            Math.ceil(
-                maxEnergy / 5
-            ) * 5,
-            5
-        );
-
-
-    // =====================================================
-    // Y AXIS
-    // =====================================================
-
-    const yAxis =
-        document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "line"
-        );
-
-
-    yAxis.setAttribute(
-        "x1",
-        left
-    );
-
-
-    yAxis.setAttribute(
-        "y1",
-        top
-    );
-
-
-    yAxis.setAttribute(
-        "x2",
-        left
-    );
-
-
-    yAxis.setAttribute(
-        "y2",
-        height - bottom
-    );
-
-
-    yAxis.setAttribute(
-        "stroke",
-        "#777"
-    );
-
-
-    svg.appendChild(
-        yAxis
-    );
-
-
-    // =====================================================
-    // X AXIS
-    // =====================================================
-
-    const xAxis =
-        document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "line"
-        );
-
-
-    xAxis.setAttribute(
-        "x1",
-        left
-    );
-
-
-    xAxis.setAttribute(
-        "y1",
-        height - bottom
-    );
-
-
-    xAxis.setAttribute(
-        "x2",
-        width - right
-    );
-
-
-    xAxis.setAttribute(
-        "y2",
-        height - bottom
-    );
-
-
-    xAxis.setAttribute(
-        "stroke",
-        "#777"
-    );
-
-
-    svg.appendChild(
-        xAxis
-    );
-
-
-    // =====================================================
-    // Y AXIS TITLE
-    // =====================================================
-
-    const yTitle =
-        document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "text"
-        );
-
-
-    yTitle.setAttribute(
-        "x",
-        5
-    );
-
-
-    yTitle.setAttribute(
-        "y",
-        15
-    );
-
-
-    yTitle.textContent =
-        "Energy (kWh / hour)";
-
-
-    yTitle.setAttribute(
-        "font-size",
-        "12"
-    );
-
-
-    svg.appendChild(
-        yTitle
-    );
-
-
-    // =====================================================
-    // X AXIS TITLE
-    // =====================================================
-
-    const xTitle =
-        document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "text"
-        );
-
-
-    xTitle.setAttribute(
-        "x",
-        width - right
-    );
-
-
-    xTitle.setAttribute(
-        "y",
-        height - 15
-    );
-
-
-    xTitle.setAttribute(
-        "text-anchor",
-        "end"
-    );
-
-
-    xTitle.textContent =
-        "Time";
-
-
-    xTitle.setAttribute(
-        "font-size",
-        "12"
-    );
-
-
-    svg.appendChild(
-        xTitle
-    );
-
-
-    // =====================================================
-    // Y AXIS GRID
-    // =====================================================
-
-    for (
-        let i = 0;
-        i <= 4;
-        i++
-    ) {
-
-        const value =
-            (max / 4) * i;
-
-
-        const y =
-            height -
-            bottom -
-            (
-                value /
-                max
-            ) *
-            chartHeight;
-
-
-        const grid =
-            document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "line"
-            );
-
-
-        grid.setAttribute(
-            "x1",
-            left
-        );
-
-
-        grid.setAttribute(
-            "y1",
-            y
-        );
-
-
-        grid.setAttribute(
-            "x2",
-            width - right
-        );
-
-
-        grid.setAttribute(
-            "y2",
-            y
-        );
-
-
-        grid.setAttribute(
-            "stroke",
-            "#e5e9f0"
-        );
-
-
-        svg.appendChild(
-            grid
-        );
-
-
-        const label =
-            document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "text"
-            );
-
-
-        label.setAttribute(
-            "x",
-            left - 10
-        );
-
-
-        label.setAttribute(
-            "y",
-            y + 4
-        );
-
-
-        label.setAttribute(
-            "text-anchor",
-            "end"
-        );
-
-
-        label.textContent =
-            value.toFixed(1);
-
-
-        label.setAttribute(
-            "font-size",
-            "11"
-        );
-
-
-        svg.appendChild(
-            label
-        );
-
+    const chartWidth = width - left - right;
+    const chartHeight = height - top - bottom;
+
+    const maxEnergy = Math.max(...items.map(item => toNumber(item.energy)));
+    const max = Math.max(Math.ceil(maxEnergy / 5) * 5, 5);
+
+    svg.appendChild(createSvgElement("line", {
+        x1: left,
+        y1: top,
+        x2: left,
+        y2: height - bottom,
+        stroke: "#777",
+    }));
+
+    svg.appendChild(createSvgElement("line", {
+        x1: left,
+        y1: height - bottom,
+        x2: width - right,
+        y2: height - bottom,
+        stroke: "#777",
+    }));
+
+    const yTitle = createSvgElement("text", {
+        x: 5,
+        y: 15,
+        "font-size": 12,
+    });
+    yTitle.textContent = "Energy (kWh / hour)";
+    svg.appendChild(yTitle);
+
+    const xTitle = createSvgElement("text", {
+        x: width - right,
+        y: height - 15,
+        "text-anchor": "end",
+        "font-size": 12,
+    });
+    xTitle.textContent = "CSV Time";
+    svg.appendChild(xTitle);
+
+    for (let i = 0; i <= 4; i += 1) {
+        const value = (max / 4) * i;
+        const y = height - bottom - (value / max) * chartHeight;
+
+        svg.appendChild(createSvgElement("line", {
+            x1: left,
+            y1: y,
+            x2: width - right,
+            y2: y,
+            stroke: "#e5e9f0",
+        }));
+
+        const label = createSvgElement("text", {
+            x: left - 10,
+            y: y + 4,
+            "text-anchor": "end",
+            "font-size": 11,
+        });
+        label.textContent = value.toFixed(1);
+        svg.appendChild(label);
     }
 
+    const points = items.map((item, index) => {
+        const x = left + (index / Math.max(items.length - 1, 1)) * chartWidth;
+        const y = height - bottom - (toNumber(item.energy) / max) * chartHeight;
+        return { x, y, item };
+    });
 
-    // =====================================================
-    // GRAPH POINTS
-    // =====================================================
+    points.forEach((point, index) => {
+        if (index % 2 !== 0) {
+            return;
+        }
 
-    const points =
-        items.map(
-            (item, index) => {
+        const tick = createSvgElement("line", {
+            x1: point.x,
+            y1: height - bottom,
+            x2: point.x,
+            y2: height - bottom + 6,
+            stroke: "#777",
+        });
+        svg.appendChild(tick);
 
-                const x =
-                    left +
-                    (
-                        index /
-                        Math.max(
-                            items.length - 1,
-                            1
-                        )
-                    ) *
-                    chartWidth;
+        const label = createSvgElement("text", {
+            x: point.x,
+            y: height - bottom + 25,
+            "text-anchor": "middle",
+            "font-size": 11,
+        });
+        label.textContent = formatTime(point.item.time);
+        svg.appendChild(label);
+    });
 
+    const line = createSvgElement("polyline", {
+        points: points.map(point => `${point.x},${point.y}`).join(" "),
+        fill: "none",
+        stroke: "#3b82f6",
+        "stroke-width": 3,
+    });
+    svg.appendChild(line);
 
-                const y =
-                    height -
-                    bottom -
-                    (
-                        item.energy /
-                        max
-                    ) *
-                    chartHeight;
+    points.forEach(point => {
+        const dot = createSvgElement("circle", {
+            cx: point.x,
+            cy: point.y,
+            r: 4,
+            fill: "#3b82f6",
+        });
+        dot.style.cursor = "pointer";
 
-
-                return {
-                    x,
-                    y,
-                    item
-                };
-
-            }
-        );
-
-
-    // =====================================================
-    // TIME LABELS
-    // =====================================================
-
-    points.forEach(
-        (point, index) => {
-
-            if (
-                index % 2 !== 0
-            ) {
-
+        dot.addEventListener("mouseenter", event => {
+            if (!tooltip) {
                 return;
-
             }
 
-
-            const date =
-                new Date(
-                    point.item.time
-                );
-
-
-            const time =
-                date.toLocaleTimeString(
-                    [],
-                    {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false
-                    }
-                );
-
-
-            const tick =
-                document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "line"
-                );
-
-
-            tick.setAttribute(
-                "x1",
-                point.x
-            );
-
-
-            tick.setAttribute(
-                "y1",
-                height - bottom
-            );
-
-
-            tick.setAttribute(
-                "x2",
-                point.x
-            );
-
-
-            tick.setAttribute(
-                "y2",
-                height - bottom + 6
-            );
-
-
-            tick.setAttribute(
-                "stroke",
-                "#777"
-            );
-
-
-            svg.appendChild(
-                tick
-            );
-
-
-            const label =
-                document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "text"
-                );
-
-
-            label.setAttribute(
-                "x",
-                point.x
-            );
-
-
-            label.setAttribute(
-                "y",
-                height - bottom + 25
-            );
-
-
-            label.setAttribute(
-                "text-anchor",
-                "middle"
-            );
-
-
-            label.textContent =
-                time;
-
-
-            label.setAttribute(
-                "font-size",
-                "11"
-            );
-
-
-            svg.appendChild(
-                label
-            );
-
-        }
-    );
-
-
-    // =====================================================
-    // ENERGY LINE
-    // =====================================================
-
-    const line =
-        document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "polyline"
-        );
-
-
-    line.setAttribute(
-        "points",
-        points
-            .map(
-                point =>
-                    `${point.x},${point.y}`
-            )
-            .join(" ")
-    );
-
-
-    line.setAttribute(
-        "fill",
-        "none"
-    );
-
-
-    line.setAttribute(
-        "stroke",
-        "#3b82f6"
-    );
-
-
-    line.setAttribute(
-        "stroke-width",
-        "3"
-    );
-
-
-    svg.appendChild(
-        line
-    );
-
-
-    // =====================================================
-    // POINTS + TOOLTIP
-    // =====================================================
-
-    points.forEach(
-        point => {
-
-            const dot =
-                document.createElementNS(
-                    "http://www.w3.org/2000/svg",
-                    "circle"
-                );
-
-
-            dot.setAttribute(
-                "cx",
-                point.x
-            );
-
-
-            dot.setAttribute(
-                "cy",
-                point.y
-            );
-
-
-            dot.setAttribute(
-                "r",
-                "4"
-            );
-
-
-            dot.setAttribute(
-                "fill",
-                "#3b82f6"
-            );
-
-
-            dot.style.cursor =
-                "pointer";
-
-
-            dot.addEventListener(
-                "mouseenter",
-                event => {
-
-                    const date =
-                        new Date(
-                            point.item.time
-                        );
-
-
-                    const time =
-                        date.toLocaleTimeString(
-                            [],
-                            {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: false
-                            }
-                        );
-
-
-                    tooltip.innerHTML = `
-
-                        <strong>
-                            Time:
-                        </strong>
-                        ${time}
-
-                        <br>
-
-                        <strong>
-                            Total:
-                        </strong>
-                        ${point.item.energy.toFixed(2)}
-                        kWh / hour
-
-                        <br>
-
-                        <strong>
-                            B001:
-                        </strong>
-                        ${point.item.B001.toFixed(2)}
-                        kWh / hour
-
-                        <br>
-
-                        <strong>
-                            B002:
-                        </strong>
-                        ${point.item.B002.toFixed(2)}
-                        kWh / hour
-
-                        <br>
-
-                        <strong>
-                            B003:
-                        </strong>
-                        ${point.item.B003.toFixed(2)}
-                        kWh / hour
-
-                    `;
-
-
-                    tooltip.style.display =
-                        "block";
-
-
-                    tooltip.style.left =
-                        `${event.clientX + 12}px`;
-
-
-                    tooltip.style.top =
-                        `${event.clientY + 12}px`;
-
-                }
-            );
-
-
-            dot.addEventListener(
-                "mousemove",
-                event => {
-
-                    tooltip.style.left =
-                        `${event.clientX + 12}px`;
-
-
-                    tooltip.style.top =
-                        `${event.clientY + 12}px`;
-
-                }
-            );
-
-
-            dot.addEventListener(
-                "mouseleave",
-                () => {
-
-                    tooltip.style.display =
-                        "none";
-
-                }
-            );
-
-
-            svg.appendChild(
-                dot
-            );
-
-        }
-    );
-
+            const buildingRows = buildingIds
+                .filter(buildingId => Object.prototype.hasOwnProperty.call(point.item, buildingId))
+                .map(buildingId => (
+                    `<br><strong>${escapeHtml(buildingId)}:</strong> ${toNumber(point.item[buildingId]).toFixed(2)} kWh / hour`
+                ))
+                .join("");
+
+            tooltip.innerHTML = `
+                <strong>Time:</strong> ${escapeHtml(formatTime(point.item.time))}
+                <br><strong>Total:</strong> ${toNumber(point.item.energy).toFixed(2)} kWh / hour
+                ${buildingRows}
+            `;
+            tooltip.style.display = "block";
+            tooltip.style.left = `${event.clientX + 12}px`;
+            tooltip.style.top = `${event.clientY + 12}px`;
+        });
+
+        dot.addEventListener("mousemove", event => {
+            if (!tooltip) {
+                return;
+            }
+
+            tooltip.style.left = `${event.clientX + 12}px`;
+            tooltip.style.top = `${event.clientY + 12}px`;
+        });
+
+        dot.addEventListener("mouseleave", () => {
+            if (tooltip) {
+                tooltip.style.display = "none";
+            }
+        });
+
+        svg.appendChild(dot);
+    });
 }
 
 
@@ -1134,37 +357,23 @@ function renderTrend(items) {
    ========================================================= */
 
 function renderPeak(peak) {
+    const container = document.getElementById("peakDetails");
 
-    document.getElementById(
-        "peakDetails"
-    ).innerHTML = `
+    if (!container) {
+        return;
+    }
 
-        <div>
-            <b>Building:</b>
-            ${peak.building_id}
-        </div>
+    if (!peak || !peak.timestamp) {
+        container.innerHTML = '<p class="muted">No peak usage row available in the CSV.</p>';
+        return;
+    }
 
-        <div>
-            <b>Room:</b>
-            ${peak.room_id}
-            (${peak.room_type})
-        </div>
-
-        <div>
-            <b>Time:</b>
-            ${formatDate(
-                peak.timestamp
-            )}
-        </div>
-
-        <div>
-            <b>Peak Energy:</b>
-            ${peak.energy.toFixed(2)}
-            kWh / 15 min
-        </div>
-
+    container.innerHTML = `
+        <div><b>Building:</b> ${escapeHtml(peak.building_id)}</div>
+        <div><b>Room:</b> ${escapeHtml(peak.room_id)} (${escapeHtml(peak.room_type)})</div>
+        <div><b>Time:</b> ${escapeHtml(formatDate(peak.timestamp))}</div>
+        <div><b>Peak Energy:</b> ${toNumber(peak.energy).toFixed(2)} kWh / CSV reading</div>
     `;
-
 }
 
 
@@ -1172,130 +381,46 @@ function renderPeak(peak) {
    ANOMALIES
    ========================================================= */
 
-function renderAnomalies(
-    anomalies
-) {
+function renderAnomalies(anomalies) {
+    const container = document.getElementById("anomalies");
 
-    const container =
-        document.getElementById(
-            "anomalies"
-        );
-
-
-    if (
-        !anomalies ||
-        !anomalies.length
-    ) {
-
-        container.innerHTML =
-            '<p class="muted">' +
-            'No significant energy anomalies detected.' +
-            '</p>';
-
+    if (!container) {
         return;
-
     }
 
+    if (!anomalies.length) {
+        container.innerHTML = '<p class="muted">No significant energy anomalies detected in the CSV readings.</p>';
+        return;
+    }
 
-    const rows =
-        anomalies
-            .map(
-                item => `
-
-                    <tr>
-
-                        <td>
-                            ${item.building}
-                        </td>
-
-                        <td>
-                            ${item.room}
-                        </td>
-
-                        <td>
-                            ${item.room_type}
-                        </td>
-
-                        <td>
-                            ${formatDate(
-                                item.timestamp
-                            )}
-                        </td>
-
-                        <td>
-                            ${item.energy.toFixed(2)}
-                            kWh / 15 min
-                        </td>
-
-                        <td>
-                            ${item.baseline.toFixed(2)}
-                            kWh / 15 min
-                        </td>
-
-                        <td>
-                            ${item.above_baseline.toFixed(1)}%
-                        </td>
-
-                    </tr>
-
-                `
-            )
-            .join("");
-
+    const rows = anomalies.map(item => `
+        <tr>
+            <td>${escapeHtml(item.building)}</td>
+            <td>${escapeHtml(item.room)}</td>
+            <td>${escapeHtml(item.room_type)}</td>
+            <td>${escapeHtml(formatDate(item.timestamp))}</td>
+            <td>${toNumber(item.energy).toFixed(2)} kWh / CSV reading</td>
+            <td>${toNumber(item.baseline).toFixed(2)} kWh / CSV reading</td>
+            <td>${toNumber(item.above_baseline).toFixed(1)}%</td>
+        </tr>
+    `).join("");
 
     container.innerHTML = `
-
         <table>
-
             <thead>
-
                 <tr>
-
-                    <th>
-                        Building
-                    </th>
-
-                    <th>
-                        Room
-                    </th>
-
-                    <th>
-                        Room Type
-                    </th>
-
-                    <th>
-                        Timestamp
-                    </th>
-
-                    <th>
-                        Energy
-                        <br>
-                        (kWh / 15 min)
-                    </th>
-
-                    <th>
-                        Baseline
-                        <br>
-                        (kWh / 15 min)
-                    </th>
-
-                    <th>
-                        Above Baseline
-                    </th>
-
+                    <th>Building</th>
+                    <th>Room</th>
+                    <th>Room Type</th>
+                    <th>Timestamp</th>
+                    <th>Energy<br>(kWh / CSV reading)</th>
+                    <th>Baseline<br>(kWh / CSV reading)</th>
+                    <th>Above Baseline</th>
                 </tr>
-
             </thead>
-
-
-            <tbody>
-                ${rows}
-            </tbody>
-
+            <tbody>${rows}</tbody>
         </table>
-
     `;
-
 }
 
 
@@ -1303,110 +428,159 @@ function renderAnomalies(
    ENERGY AGENT RECOMMENDATIONS
    ========================================================= */
 
-function renderRecommendations(
-    recommendations
-) {
+function renderRecommendations(recommendations) {
+    const container = document.getElementById("recommendations");
 
-    const container =
-        document.getElementById(
-            "recommendations"
-        );
-
+    if (!container) {
+        return;
+    }
 
     container.innerHTML = "";
 
-
-    if (
-        !recommendations ||
-        !recommendations.length
-    ) {
-
-        container.innerHTML =
-            '<p class="muted">' +
-            'No recommendations available.' +
-            '</p>';
-
+    if (!recommendations.length) {
+        container.innerHTML = '<p class="muted">No CSV-derived recommendations available.</p>';
         return;
-
     }
 
-
-    recommendations.forEach(
-        item => {
-
-            const alert =
-                document.createElement(
-                    "div"
-                );
-
-
-            alert.className =
-                `alert ${item.priority.toLowerCase()}`;
-
-
-            alert.innerHTML = `
-
-                <div class="alert-title">
-
-                    ${item.priority}
-                    •
-                    ${item.type}
-
-                </div>
-
-
-                <div>
-                    ${item.message}
-                </div>
-
-
-                <div class="muted">
-
-                    Reason:
-                    ${item.reason}
-
-                </div>
-
-            `;
-
-
-            container.appendChild(
-                alert
-            );
-
-        }
-    );
-
+    recommendations.forEach(item => {
+        const alert = document.createElement("div");
+        alert.className = `alert ${safeClass(item.priority || "low")}`;
+        alert.innerHTML = `
+            <div class="alert-title">
+                ${escapeHtml(item.priority || "Info")} • ${escapeHtml(item.type || "Recommendation")}
+            </div>
+            <div>${escapeHtml(item.message || "")}</div>
+            <div class="muted">Reason: ${escapeHtml(item.reason || "Derived from CSV readings.")}</div>
+        `;
+        container.appendChild(alert);
+    });
 }
 
 
 /* =========================================================
-   DATE FORMAT
+   HELPERS
    ========================================================= */
 
-function formatDate(
-    value
-) {
+function getBuildingIds(data) {
+    const fromMetadata = data.metadata?.building_ids;
 
-    return new Date(
-        value
-    ).toLocaleString();
+    if (Array.isArray(fromMetadata) && fromMetadata.length) {
+        return fromMetadata.map(String);
+    }
 
+    const fromBuildings = data.building_energy || [];
+
+    if (fromBuildings.length) {
+        return fromBuildings.map(item => String(item.building));
+    }
+
+    const fromTrend = data.hourly_energy || [];
+    const keys = new Set();
+
+    fromTrend.forEach(row => {
+        Object.keys(row).forEach(key => {
+            if (key !== "time" && key !== "energy") {
+                keys.add(key);
+            }
+        });
+    });
+
+    return Array.from(keys).sort();
 }
 
 
-/* =========================================================
-   INITIAL LOAD
-   ========================================================= */
+function createSvgElement(name, attributes) {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", name);
+
+    Object.entries(attributes || {}).forEach(([key, value]) => {
+        element.setAttribute(key, value);
+    });
+
+    return element;
+}
+
+
+function setText(id, value) {
+    const element = document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+
+function toNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+}
+
+
+function formatDate(value) {
+    if (!value) {
+        return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+
+    return date.toLocaleString();
+}
+
+
+function formatTime(value) {
+    if (!value) {
+        return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
+    }
+
+    return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    });
+}
+
+
+function safeClass(value) {
+    return String(value ?? "")
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, "");
+}
+
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function showDashboardError() {
+    [
+        "totalEnergy",
+        "estimatedCost",
+        "efficiencyScore",
+        "potentialSavings",
+        "averageEnergy",
+        "peakEnergy",
+        "carbonReduction",
+        "anomalyCount",
+    ].forEach(id => setText(id, "-"));
+
+    setText("datasetSummary", "Unable to load CSV dashboard data");
+}
+
 
 loadDashboard();
-
-
-/*
- * Refresh dashboard every 30 seconds.
- */
-
-setInterval(
-    loadDashboard,
-    30000
-);
+setInterval(loadDashboard, 30000);

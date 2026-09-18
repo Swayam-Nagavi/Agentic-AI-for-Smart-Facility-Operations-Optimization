@@ -208,6 +208,7 @@ def generate_room(building_id, room_id, timestamp, previous_temperature=None, fo
         "building_id": building_id,
         "room_id": room_id,
         "room_type": room["room_type"],
+        "capacity": room["capacity"],
         "temperature": round(temperature, 2),
         "humidity": round(indoor_humidity, 2),
         "occupancy": occupancy,
@@ -287,7 +288,11 @@ def save_to_csv(records, filename="facility_data.csv"):
         return
 
     with open(filename, "w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=records[0].keys())
+        writer = csv.DictWriter(
+            file,
+            fieldnames=records[0].keys(),
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(records)
 

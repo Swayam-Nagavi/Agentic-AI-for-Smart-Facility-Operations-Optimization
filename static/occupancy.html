@@ -70,6 +70,11 @@
         <span>Peak Occupancy</span>
         <strong id="peakOccupancy">-</strong>
       </div>
+
+      <div class="card stat-card">
+        <span>Occupancy Rate</span>
+        <strong id="occupancyRate">-</strong>
+      </div>
     </section>
 
     <section class="card">
@@ -106,14 +111,16 @@
           <thead>
             <tr>
               <th>Zone</th>
+              <th>Room Type</th>
               <th>Occupancy</th>
+              <th>Capacity</th>
               <th>Utilization</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody id="zoneTable">
             <tr>
-              <td colspan="4">Loading...</td>
+              <td colspan="6">Loading...</td>
             </tr>
           </tbody>
         </table>
@@ -123,8 +130,8 @@
     <section class="dashboard-card">
       <div class="card-header">
         <div>
-          <h2>24-Hour Room Occupancy</h2>
-          <p>Hourly occupancy readings for every room</p>
+          <h2>Hourly Room Occupancy</h2>
+          <p>Hourly averages using only readings present in facility_data.csv</p>
         </div>
       </div>
     
@@ -152,6 +159,13 @@
         <p>Loading...</p>
       </div>
     </section>
+
+    <footer class="data-source">
+      <strong>Data source:</strong>
+      <span id="dataSource">Occupancy readings loaded from facility_data.csv</span>
+      <p id="dataPeriod">Loading CSV timestamp range...</p>
+      <p id="dataNote">Only CSV-backed occupancy readings are shown.</p>
+    </footer>
 
   </main>
 

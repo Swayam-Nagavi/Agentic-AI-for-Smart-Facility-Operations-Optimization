@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.health_scoring import (
+    calculate_condition_risk,
     calculate_health_score,
     health_category,
     maintenance_priority,
@@ -197,10 +198,32 @@ def analyze_facility_assets(
         )
 
 
-    df = pd.read_csv(path)
+    try:
+        df = pd.read_csv(path)
+    except (pd.errors.EmptyDataError, pd.errors.ParserError):
+        return []
 
 
     if df.empty:
+        return []
+
+
+    required_columns = [
+        "building_id",
+        "room_id",
+        "room_type",
+        "temperature",
+        "humidity",
+        "occupancy",
+        "energy_consumption",
+        "hvac_energy",
+        "hvac_status",
+        "hvac_setpoint",
+        "equipment_status",
+        "timestamp",
+    ]
+
+    if any(column not in df.columns for column in required_columns):
         return []
 
 
@@ -209,12 +232,24 @@ def analyze_facility_assets(
     )
 
 
+    observation_counts = (
+        df.groupby(["building_id", "room_id"])
+        .size()
+        .to_dict()
+    )
+
+
     prediction_data = (
         _prepare_prediction_data(df)
     )
 
 
-    model = load_future_condition_model()
+    try:
+        model = load_future_condition_model()
+        model_error = None
+    except Exception as exc:  # pragma: no cover - defensive dashboard fallback
+        model = None
+        model_error = str(exc)
 
 
     results = []
@@ -228,7 +263,7 @@ def analyze_facility_assets(
         )
 
 
-        condition_risk = _condition_risk(
+        condition_risk = calculate_condition_risk(
             row
         )
 
@@ -303,12 +338,12 @@ def analyze_facility_assets(
 
 
         future_prediction = {
-            "prediction": "Stable",
+            "prediction": "Unavailable",
             "probabilities": {},
         }
 
 
-        if not matching.empty:
+        if model is not None and not matching.empty:
 
             prediction_row = (
                 matching.iloc[0]
@@ -341,10 +376,10 @@ def analyze_facility_assets(
         ):
 
             prediction_recommendation = (
-                "Condition is predicted to "
-                "deteriorate in the next "
-                "observation. Consider "
-                "preventive inspection."
+                "CSV-based features indicate the "
+                "next equipment condition may "
+                "deteriorate. Consider preventive "
+                "inspection."
             )
 
         elif predicted_condition == (
@@ -352,17 +387,25 @@ def analyze_facility_assets(
         ):
 
             prediction_recommendation = (
-                "Condition is predicted to "
-                "improve in the next "
-                "observation."
+                "CSV-based features indicate the "
+                "next equipment condition may "
+                "improve."
+            )
+
+        elif predicted_condition == "Stable":
+
+            prediction_recommendation = (
+                "CSV-based features indicate the "
+                "next equipment condition may "
+                "remain stable."
             )
 
         else:
 
             prediction_recommendation = (
-                "Condition is predicted to "
-                "remain stable in the next "
-                "observation."
+                "Future condition prediction is "
+                "unavailable; current health still "
+                "uses the latest CSV readings."
             )
 
 
@@ -417,6 +460,14 @@ def analyze_facility_assets(
                         "No maintenance required"
                     ),
 
+                "work_order_status":
+                    (
+                        "CSV action required"
+                        if maintenance_required
+                        else
+                        "No action required"
+                    ),
+
                 "recommendation":
                     recommendation,
 
@@ -439,6 +490,17 @@ def analyze_facility_assets(
                 "occupancy":
                     int(
                         row["occupancy"]
+                    ),
+
+                "observations":
+                    int(
+                        observation_counts.get(
+                            (
+                                row["building_id"],
+                                row["room_id"],
+                            ),
+                            0,
+                        )
                     ),
 
                 "energy_consumption":
@@ -491,12 +553,15 @@ def analyze_facility_assets(
                 "prediction_recommendation":
                     prediction_recommendation,
 
+                "prediction_available":
+                    bool(model is not None and not matching.empty),
+
                 "prediction_basis":
                     (
-                        "Random Forest model trained "
-                        "on the facility's historical "
-                        "sensor readings to predict "
-                        "the next condition state."
+                        "Future condition is predicted from feature columns "
+                        "calculated from facility_data.csv."
+                        if model is not None
+                        else f"Future condition model unavailable: {model_error}"
                     ),
 
                 "health_basis":
@@ -521,9 +586,14 @@ def build_maintenance_dashboard(
     data_path=FACILITY_DATA_PATH
 ):
 
-    assets = analyze_facility_assets(
-        data_path
-    )
+    path = Path(data_path)
+
+    try:
+        assets = analyze_facility_assets(
+            data_path
+        )
+    except FileNotFoundError:
+        assets = []
 
 
     distribution = {
@@ -587,6 +657,15 @@ def build_maintenance_dashboard(
     ]
 
 
+    unavailable = [
+        asset
+        for asset in assets
+        if asset[
+            "future_condition"
+        ] == "Unavailable"
+    ]
+
+
     average_health = (
         sum(
             asset["health_score"]
@@ -605,6 +684,8 @@ def build_maintenance_dashboard(
 
 
     return {
+
+        "available": bool(assets),
 
         "kpis": {
 
@@ -636,6 +717,9 @@ def build_maintenance_dashboard(
 
             "stable_assets":
                 len(stable),
+
+            "prediction_unavailable_assets":
+                len(unavailable),
         },
 
 
@@ -684,20 +768,30 @@ def build_maintenance_dashboard(
 
             "stable":
                 len(stable),
+
+            "unavailable":
+                len(unavailable),
+        },
+
+
+        "metadata": {
+            "data_source": path.name,
+            "assets_monitored": len(assets),
+            "total_observations": sum(
+                int(asset.get("observations", 0))
+                for asset in assets
+            ),
         },
 
 
         "data_source":
-            "Facility sensor data from facility_data.csv",
+            f"Facility sensor readings loaded from {path.name}",
 
 
         "note":
             (
-                "The future condition model predicts "
-                "whether the next observed equipment "
-                "condition is likely to improve, remain "
-                "stable, or deteriorate. It does not "
-                "predict equipment failure probability "
-                "or a failure date."
+                "Maintenance health, alerts, and schedules are calculated from "
+                f"{path.name} readings only. No default assets, work orders, "
+                "or fallback fault records are injected."
             ),
     }
