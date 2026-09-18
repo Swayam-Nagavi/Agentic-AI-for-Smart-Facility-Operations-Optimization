@@ -6,6 +6,7 @@ from src.csv_data_manager import ensure_facility_csv, ensure_security_csv
 from src.energy_agent import build_energy_dashboard
 from src.maintenance_agent import build_maintenance_dashboard
 from src.occupancy_agent import build_occupancy_dashboard
+from src.orchestrator_agent import build_operations_dashboard
 from src.security_agent import build_security_dashboard
 
 
@@ -58,6 +59,25 @@ def build_security_data():
 
     ensure_security_csv(SECURITY_DATA_PATH, FACILITY_DATA_PATH)
     return build_security_dashboard(SECURITY_DATA_PATH)
+
+
+def build_operations_data():
+    """Build the Milestone 4 multi-agent operations dashboard."""
+
+    ensure_facility_csv(FACILITY_DATA_PATH)
+    ensure_security_csv(SECURITY_DATA_PATH, FACILITY_DATA_PATH)
+
+    energy = build_energy_dashboard(FACILITY_DATA_PATH)
+    maintenance = build_maintenance_dashboard(FACILITY_DATA_PATH)
+    occupancy = build_occupancy_dashboard(FACILITY_DATA_PATH)
+    security = build_security_dashboard(SECURITY_DATA_PATH)
+
+    return build_operations_dashboard(
+        energy,
+        maintenance,
+        occupancy,
+        security,
+    )
 
 
 # ============================================================
@@ -119,6 +139,22 @@ def security_alerts_api():
     })
 
 
+@app.route("/api/orchestrator/dashboard")
+def orchestrator_dashboard_api():
+    return jsonify(build_operations_data())
+
+
+@app.route("/api/orchestrator/actions")
+def orchestrator_actions_api():
+    data = build_operations_data()
+
+    return jsonify({
+        "actions": data.get("actions", []),
+        "kpis": data.get("kpis", {}),
+        "guardrails": data.get("guardrails", []),
+    })
+
+
 @app.route("/api/health")
 def health_check():
     return jsonify({
@@ -128,6 +164,7 @@ def health_check():
             "maintenance": True,
             "occupancy": True,
             "security": True,
+            "orchestrator": True,
         },
         "data_sources": {
             "facility": "ready",
@@ -158,6 +195,11 @@ def occupancy_page():
 @app.route("/security.html")
 def security_page():
     return send_from_directory("static", "security.html")
+
+
+@app.route("/operations.html")
+def operations_page():
+    return send_from_directory("static", "operations.html")
 
 
 # ============================================================

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Command Center</title>
+  <link rel="stylesheet" href="/static/operations.css">
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>FacilityOps AI</h2>
+      <p>Agentic Platform</p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/" class="nav-item">
+        <span>⚡</span>
+        <span>Energy Agent</span>
+      </a>
+
+      <a href="/maintenance.html" class="nav-item">
+        <span>🔧</span>
+        <span>Maintenance Agent</span>
+      </a>
+
+      <a href="/occupancy.html" class="nav-item">
+        <span>👥</span>
+        <span>Occupancy Agent</span>
+      </a>
+
+      <a href="/security.html" class="nav-item">
+        <span>🛡️</span>
+        <span>Security Agent</span>
+      </a>
+
+      <a href="/operations.html" class="nav-item active">
+        <span>🧠</span>
+        <span>Operations Center</span>
+      </a>
+    </nav>
+  </aside>
+
+  <header class="topbar">
+    <div>
+      <h1>🧠 Operations Command Center</h1>
+      <p>Multi-agent coordination for facility operations and optimization</p>
+    </div>
+
+    <button id="refreshButton" class="refresh-button">Refresh</button>
+  </header>
+
+  <main class="container">
+    <section class="hero-card">
+      <div>
+        <span class="eyebrow">Milestone 4</span>
+        <h2>Autonomous Facility Orchestration</h2>
+        <p>
+          Energy, Maintenance, Occupancy, and Security agents are coordinated
+          into one prioritized operations layer with comfort and safety guardrails.
+        </p>
+      </div>
+
+      <div class="score-ring" id="facilityScoreRing">
+        <strong id="facilityScore">--</strong>
+        <span id="facilityStatus">Loading</span>
+      </div>
+    </section>
+
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span>Coordinated Agents</span>
+        <strong id="coordinatedAgents">-</strong>
+      </div>
+
+      <div class="kpi-card">
+        <span>Active Alerts</span>
+        <strong id="activeAlerts">-</strong>
+      </div>
+
+      <div class="kpi-card">
+        <span>Critical Actions</span>
+        <strong id="criticalActions">-</strong>
+      </div>
+
+      <div class="kpi-card">
+        <span>Automation Readiness</span>
+        <strong id="automationReadiness">-</strong>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Domain Performance Scores</h2>
+          <p>Weighted health of each operating domain</p>
+        </div>
+      </div>
+
+      <div id="domainScores" class="score-grid">
+        <div class="loading">Loading domain scores...</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Agent Status</h2>
+          <p>Current state of each specialized facility agent</p>
+        </div>
+      </div>
+
+      <div id="agentStatus" class="agent-grid">
+        <div class="loading">Loading agent status...</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Prioritized Optimization Actions</h2>
+          <p>Recommended actions ranked by operational priority</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Priority</th>
+              <th>Domain</th>
+              <th>Action</th>
+              <th>Reason</th>
+              <th>Automation</th>
+            </tr>
+          </thead>
+          <tbody id="actionsTableBody">
+            <tr>
+              <td colspan="6" class="loading">Loading recommended actions...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Cross-Agent Insights</h2>
+            <p>Correlations identified across operating domains</p>
+          </div>
+        </div>
+        <div id="crossAgentInsights" class="stack-list">
+          <div class="loading">Loading insights...</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Automation Guardrails</h2>
+            <p>Safety, comfort, reliability, and security constraints</p>
+          </div>
+        </div>
+        <div id="guardrails" class="stack-list">
+          <div class="loading">Loading guardrails...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Decision Log</h2>
+            <p>Latest orchestration decisions and rationale</p>
+          </div>
+        </div>
+        <div id="decisionLog" class="stack-list">
+          <div class="loading">Loading decision log...</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Operations Timeline</h2>
+            <p>Recent events from coordinated agents</p>
+          </div>
+        </div>
+        <div id="timeline" class="timeline">
+          <div class="loading">Loading timeline...</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="data-source">
+      <strong>Intelligence layer:</strong>
+      <span id="dataSource">Live facility intelligence layer</span>
+      <p id="dataNote">Coordinating facility agents...</p>
+    </footer>
+  </main>
+
+  <script src="/static/operations.js"></script>
+</body>
+
+</html>
