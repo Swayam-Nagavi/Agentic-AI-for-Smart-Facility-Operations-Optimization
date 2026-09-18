@@ -214,22 +214,40 @@ def generate_recommendations(df):
 
     # 3. Equipment warnings.
     equipment_warnings = df[
-        df["equipment_status"].astype(str).str.lower() == "warning"
+        df["equipment_status"]
+        .astype(str)
+        .str.lower()
+        .isin(["warning", "fault"])
     ]
 
     if not equipment_warnings.empty:
+        equipment_warnings = equipment_warnings.copy()
+        equipment_warnings["_status_rank"] = (
+            equipment_warnings["equipment_status"]
+            .astype(str)
+            .str.lower()
+            .map({"fault": 2, "warning": 1})
+            .fillna(0)
+        )
+        equipment_warnings = equipment_warnings.sort_values(
+            ["_status_rank", "timestamp"],
+            ascending=[False, False],
+        )
+
         for _, row in equipment_warnings.head(3).iterrows():
+            status = str(row["equipment_status"]).lower()
+
             recommendations.append({
                 "type": "Equipment Investigation",
-                "priority": "High",
+                "priority": "Critical" if status == "fault" else "High",
                 "message": (
                     f"{row['building_id']} {row['room_id']} "
-                    f"({row['room_type']}) reported an equipment warning "
+                    f"({row['room_type']}) reported an equipment {status} "
                     f"at {row['timestamp']}."
                 ),
                 "reason": (
                     "The recommendation is generated when equipment status "
-                    "reports a warning."
+                    "reports a warning or fault."
                 ),
             })
 

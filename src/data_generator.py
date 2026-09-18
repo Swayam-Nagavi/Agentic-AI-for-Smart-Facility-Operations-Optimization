@@ -39,6 +39,65 @@ BUILDINGS = {
 
 MAX_VACANT_ROOMS_PER_INTERVAL = 4
 
+# The final dashboard snapshot intentionally contains every occupancy state
+# used by the Occupancy Agent: Vacant, Low, Moderate, High, Near Capacity,
+# and Over Capacity. Four rooms are vacant and five are occupied, so the
+# facility rule is still respected.
+LATEST_OCCUPANCY_PATTERN = {
+    ("B001", "R001"): 0,   # Vacant
+    ("B001", "R002"): 2,   # Low
+    ("B001", "R003"): 1,   # Moderate
+    ("B002", "R001"): 9,   # High
+    ("B002", "R002"): 9,   # Near Capacity
+    ("B002", "R003"): 4,   # Over Capacity
+    ("B003", "R001"): 0,   # Vacant
+    ("B003", "R002"): 0,   # Vacant
+    ("B003", "R003"): 0,   # Vacant
+}
+
+# Additional scheduled scenarios ensure the historical data contains recurring
+# low, moderate, high, near-capacity, over-capacity, and vacant examples.
+OCCUPANCY_CASE_SCENARIOS = {
+    24: {
+        ("B001", "R001"): 2,
+        ("B001", "R002"): 5,
+        ("B001", "R003"): 1,
+        ("B002", "R001"): 9,
+        ("B002", "R002"): 9,
+        ("B002", "R003"): 4,
+        ("B003", "R001"): 0,
+        ("B003", "R002"): 0,
+        ("B003", "R003"): 0,
+    },
+    52: {
+        ("B001", "R001"): 11,
+        ("B001", "R002"): 0,
+        ("B001", "R003"): 2,
+        ("B002", "R001"): 5,
+        ("B002", "R002"): 7,
+        ("B002", "R003"): 1,
+        ("B003", "R001"): 13,
+        ("B003", "R002"): 0,
+        ("B003", "R003"): 0,
+    },
+    95: LATEST_OCCUPANCY_PATTERN,
+}
+
+
+EQUIPMENT_CASE_SCENARIOS = {
+    95: {
+        ("B001", "R001"): "Normal",
+        ("B001", "R002"): "Warning",
+        ("B001", "R003"): "Normal",
+        ("B002", "R001"): "Warning",
+        ("B002", "R002"): "Normal",
+        ("B002", "R003"): "Fault",
+        ("B003", "R001"): "Normal",
+        ("B003", "R002"): "Normal",
+        ("B003", "R003"): "Normal",
+    }
+}
+
 
 def outdoor_conditions(hour):
     temperature = (
@@ -65,14 +124,50 @@ def minimum_operational_occupancy(room_type):
     return random.randint(1, 6)
 
 
+def occupied_count_for_room(room_type):
+    capacity = 3 if room_type == "Server Room" else 12 if room_type == "Office" else 10
+    roll = random.random()
+
+    if room_type == "Server Room":
+        if roll < 0.55:
+            return 1
+        if roll < 0.85:
+            return 2
+        if roll < 0.96:
+            return 3
+        return 4
+
+    low_min = 1
+    low_max = max(1, math.floor(capacity * 0.29))
+    moderate_min = max(1, math.ceil(capacity * 0.30))
+    moderate_max = max(moderate_min, math.floor(capacity * 0.69))
+    high_min = max(1, math.ceil(capacity * 0.70))
+    high_max = max(high_min, math.floor(capacity * 0.89))
+    near_min = max(1, math.ceil(capacity * 0.90))
+    near_max = max(near_min, capacity - 1)
+
+    if roll < 0.18:
+        return random.randint(low_min, low_max)
+    if roll < 0.62:
+        return random.randint(moderate_min, moderate_max)
+    if roll < 0.84:
+        return random.randint(high_min, high_max)
+    if roll < 0.96:
+        return random.randint(near_min, near_max)
+    return random.randint(capacity + 1, capacity + 2)
+
+
 def occupancy_for_room(room_type, timestamp):
     hour = timestamp.hour
     weekday = timestamp.weekday() < 5
 
     if room_type == "Server Room":
-        if 8 <= hour < 20:
-            return random.choices([0, 1, 2], weights=[0.55, 0.35, 0.10])[0]
-        return random.choices([0, 1], weights=[0.85, 0.15])[0]
+        vacant_probability = 0.45 if 8 <= hour < 20 else 0.65
+
+        if random.random() < vacant_probability:
+            return 0
+
+        return occupied_count_for_room(room_type)
 
     # Night / off-peak hours (before 7am or after 8pm)
     if hour < 7 or hour >= 20:
@@ -104,8 +199,119 @@ def occupancy_for_room(room_type, timestamp):
     if random.random() > probability:
         return 0
 
-    occupancy = int(random.gauss(capacity * 0.55, capacity * 0.20))
-    return max(1, min(capacity, occupancy))
+    return occupied_count_for_room(room_type)
+
+
+def apply_occupancy_case_scenarios(interval, interval_occupancies):
+    scenario = OCCUPANCY_CASE_SCENARIOS.get(interval)
+
+    if scenario:
+        interval_occupancies.update(scenario)
+
+
+def enforce_vacancy_limit(interval_occupancies):
+    vacant_keys = [
+        key
+        for key, occupancy in interval_occupancies.items()
+        if occupancy <= 0
+    ]
+
+    if len(vacant_keys) <= MAX_VACANT_ROOMS_PER_INTERVAL:
+        return
+
+    random.shuffle(vacant_keys)
+    rooms_to_activate = len(vacant_keys) - MAX_VACANT_ROOMS_PER_INTERVAL
+
+    for key in vacant_keys[:rooms_to_activate]:
+        _, room_id = key
+        room_type = ROOMS[room_id]["room_type"]
+        interval_occupancies[key] = minimum_operational_occupancy(room_type)
+
+
+def apply_equipment_case_scenarios(interval, record):
+    scenario = EQUIPMENT_CASE_SCENARIOS.get(interval, {})
+    key = (record["building_id"], record["room_id"])
+
+    if key in scenario:
+        record["equipment_status"] = scenario[key]
+
+
+def apply_latest_sensor_case_scenarios(interval, record):
+    if interval != 95:
+        return
+
+    key = (record["building_id"], record["room_id"])
+
+    sensor_cases = {
+        ("B001", "R001"): {
+            "temperature": 24.0,
+            "humidity": 50.0,
+            "hvac_status": "OFF",
+            "hvac_energy": 0.0,
+            "lighting_energy": 0.008,
+            "equipment_energy": 0.090,
+            "other_energy": 0.015,
+        },
+        ("B001", "R002"): {
+            "temperature": 24.7,
+            "humidity": 55.0,
+            "hvac_status": "OFF",
+            "hvac_energy": 0.0,
+            "lighting_energy": 0.010,
+            "equipment_energy": 0.080,
+            "other_energy": 0.015,
+        },
+        ("B001", "R003"): {
+            "temperature": 22.3,
+            "humidity": 54.0,
+            "hvac_status": "OFF",
+            "hvac_energy": 0.0,
+            "lighting_energy": 0.004,
+            "equipment_energy": 0.630,
+            "other_energy": 0.015,
+        },
+        ("B002", "R001"): {
+            "temperature": 26.3,
+            "humidity": 56.0,
+            "hvac_status": "ON",
+            "hvac_energy": 0.520,
+            "lighting_energy": 0.025,
+            "equipment_energy": 0.145,
+            "other_energy": 0.018,
+        },
+        ("B002", "R002"): {
+            "temperature": 25.3,
+            "humidity": 62.0,
+            "hvac_status": "ON",
+            "hvac_energy": 0.470,
+            "lighting_energy": 0.029,
+            "equipment_energy": 0.120,
+            "other_energy": 0.018,
+        },
+        ("B002", "R003"): {
+            "temperature": 26.0,
+            "humidity": 68.0,
+            "hvac_status": "ON",
+            "hvac_energy": 0.950,
+            "lighting_energy": 0.012,
+            "equipment_energy": 0.725,
+            "other_energy": 0.020,
+        },
+    }
+
+    updates = sensor_cases.get(key)
+
+    if not updates:
+        return
+
+    record.update(updates)
+    record["energy_consumption"] = round(
+        record["hvac_energy"]
+        + record["lighting_energy"]
+        + record["equipment_energy"]
+        + record["other_energy"],
+        3,
+    )
 
 
 def generate_room(building_id, room_id, timestamp, previous_temperature=None, forced_occupancy=None):
@@ -214,7 +420,14 @@ def generate_room(building_id, room_id, timestamp, previous_temperature=None, fo
     )
     indoor_humidity = max(35, min(75, indoor_humidity))
 
-    equipment_status = "Warning" if random.random() < 0.008 else "Normal"
+    equipment_roll = random.random()
+
+    if equipment_roll < 0.003:
+        equipment_status = "Fault"
+    elif equipment_roll < 0.015:
+        equipment_status = "Warning"
+    else:
+        equipment_status = "Normal"
 
     return {
         "building_id": building_id,
@@ -261,20 +474,8 @@ def generate_facility_data():
                 key = (building_id, room_id)
                 interval_occupancies[key] = occupancy_for_room(ROOMS[room_id]["room_type"], timestamp)
 
-        vacant_keys = [
-            key
-            for key, occupancy in interval_occupancies.items()
-            if occupancy <= 0
-        ]
-
-        if len(vacant_keys) > MAX_VACANT_ROOMS_PER_INTERVAL:
-            random.shuffle(vacant_keys)
-            rooms_to_activate = len(vacant_keys) - MAX_VACANT_ROOMS_PER_INTERVAL
-
-            for key in vacant_keys[:rooms_to_activate]:
-                _, room_id = key
-                room_type = ROOMS[room_id]["room_type"]
-                interval_occupancies[key] = minimum_operational_occupancy(room_type)
+        apply_occupancy_case_scenarios(interval, interval_occupancies)
+        enforce_vacancy_limit(interval_occupancies)
 
         for building_id in BUILDINGS:
             for room_id in ROOMS:
@@ -287,6 +488,9 @@ def generate_facility_data():
                     previous_temperatures.get(key),
                     forced_occupancy=interval_occupancies[key],
                 )
+
+                apply_equipment_case_scenarios(interval, record)
+                apply_latest_sensor_case_scenarios(interval, record)
 
                 previous_temperatures[key] = record["temperature"]
                 records.append(record)

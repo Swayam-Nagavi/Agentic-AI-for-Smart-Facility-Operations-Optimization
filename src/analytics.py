@@ -207,7 +207,10 @@ def detect_anomalies(df):
     ].copy()
 
     equipment_anomalies = df[
-        df["equipment_status"].astype(str).str.lower() == "warning"
+        df["equipment_status"]
+        .astype(str)
+        .str.lower()
+        .isin(["warning", "fault"])
     ].copy()
 
     anomalies = pd.concat(
