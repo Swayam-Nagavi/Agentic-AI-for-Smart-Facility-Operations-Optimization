@@ -47,7 +47,7 @@
 
             <p>
                 Energy Intelligence & Monitoring
-                • CSV-backed Monitoring
+                • Real-Time Monitoring
             </p>
         </div>
 
@@ -69,23 +69,23 @@
             <strong>Monitoring Configuration</strong>
 
             <span>
-                Sampling Interval: <b id="samplingInterval">Loading CSV...</b>
+                Sampling Interval: <b id="samplingInterval">Loading...</b>
             </span>
 
             <span>
-                Energy Unit: <b id="energyUnit">Loading CSV...</b>
+                Energy Unit: <b id="energyUnit">Loading...</b>
             </span>
 
             <span>
-                Dataset: <b id="datasetSummary">Loading CSV...</b>
+                Dataset: <b id="datasetSummary">Loading...</b>
             </span>
 
             <span>
-                Source: <b id="dataSource">facility_data.csv</b>
+                Source: <b id="dataSource">Live facility sensors</b>
             </span>
 
             <span>
-                Period: <b id="monitoringPeriod">Loading CSV...</b>
+                Period: <b id="monitoringPeriod">Loading...</b>
             </span>
 
         </section>
@@ -111,7 +111,7 @@
                 </strong>
 
                 <small>
-                    Total facility consumption in the CSV period
+                    Total facility consumption in the monitoring period
                 </small>
 
             </div>
@@ -175,7 +175,7 @@
                 </strong>
 
                 <small>
-                    Average energy consumed per CSV reading
+                    Average energy consumed per reading
                 </small>
 
             </div>
@@ -190,7 +190,7 @@
                 </strong>
 
                 <small>
-                    Highest energy consumption in one CSV reading
+                    Highest energy consumption in one reading
                 </small>
 
             </div>
@@ -220,7 +220,7 @@
                 </strong>
 
                 <small>
-                    Unusual CSV energy readings
+                    Unusual energy readings
                 </small>
 
             </div>
@@ -240,7 +240,7 @@
 
             <p class="chart-description">
 
-                Breakdown of total CSV-period energy consumption
+                Breakdown of total monitoring period energy consumption
                 by major facility systems.
 
                 Values are shown in kWh and percentage of total energy.
@@ -268,9 +268,9 @@
                 <p class="chart-description">
 
                     Total energy consumed by each building
-                    during the CSV monitoring period.
+                    during the monitoring period.
 
-                    <b>Unit: kWh / CSV period</b>
+                    <b>Unit: kWh / monitoring period</b>
 
                 </p>
 
@@ -290,7 +290,7 @@
                     Total energy consumed during each hour.
 
                     Each hour contains four
-                    CSV readings.
+                    readings.
 
                     <b>Unit: kWh / hour</b>
 
@@ -324,9 +324,9 @@
                 <p class="chart-description">
 
                     Total energy consumed by each room
-                    during the CSV monitoring period.
+                    during the monitoring period.
 
-                    <b>Unit: kWh / CSV period</b>
+                    <b>Unit: kWh / monitoring period</b>
 
                 </p>
 
@@ -344,9 +344,9 @@
                 <p class="chart-description">
 
                     Highest energy consumption recorded
-                    during one CSV reading.
+                    during one reading.
 
-                    <b>Unit: kWh / CSV reading</b>
+                    <b>Unit: kWh / reading</b>
 
                 </p>
 
@@ -370,14 +370,14 @@
             <p class="chart-description">
 
                 Anomalies are detected when a room's
-                CSV energy consumption is significantly
+                Energy consumption is significantly
                 higher than its normal baseline.
 
                 <br><br>
 
                 <b>
                     Energy and Baseline:
-                    kWh / CSV reading
+                    kWh / reading
                 </b>
 
             </p>

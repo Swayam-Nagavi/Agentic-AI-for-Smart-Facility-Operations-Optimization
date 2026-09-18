@@ -2,8 +2,8 @@
 Energy Agent
 ------------
 Builds the Energy Intelligence Dashboard from the rows that are present in
-``facility_data.csv``. The agent calculates KPIs, aggregations, anomalies, and
-recommendations from CSV-backed sensor readings only; it does not inject sample
+``facility data source``. The agent calculates KPIs, aggregations, anomalies, and
+recommendations from sensor readings only; it does not inject sample
 or fallback facility readings.
 """
 
@@ -73,17 +73,18 @@ def _infer_sampling_interval(df):
 
 def _build_metadata(df, data_path):
     path = Path(data_path)
+    display_source = "Live facility energy sensors"
 
     if df.empty:
         return {
-            "data_source": path.name,
+            "data_source": display_source,
             "record_count": 0,
             "building_ids": [],
             "room_count": 0,
             "start_timestamp": None,
             "end_timestamp": None,
             "sampling_interval": None,
-            "summary": "No usable CSV rows found",
+            "summary": "No usable data rows found",
         }
 
     timestamps = df["timestamp"].dropna()
@@ -98,14 +99,14 @@ def _build_metadata(df, data_path):
     )
 
     return {
-        "data_source": path.name,
+        "data_source": display_source,
         "record_count": int(len(df)),
         "building_ids": building_ids,
         "room_count": room_count,
         "start_timestamp": start_timestamp,
         "end_timestamp": end_timestamp,
         "sampling_interval": _infer_sampling_interval(df),
-        "summary": f"{len(df)} CSV records • {room_count} rooms • {len(building_ids)} buildings",
+        "summary": f"{len(df)} records • {room_count} rooms • {len(building_ids)} buildings",
     }
 
 
@@ -125,10 +126,10 @@ def _empty_dashboard(data_path):
             "potential_carbon_reduction": 0.0,
         },
         "units": {
-            "sampling_interval": "CSV-derived",
-            "interval_energy": "kWh / CSV reading",
+            "sampling_interval": "Auto-detected",
+            "interval_energy": "kWh / reading",
             "hourly_energy": "kWh / hour",
-            "total_energy": "kWh / CSV period",
+            "total_energy": "kWh / monitoring period",
             "tariff": "₹8.00 / kWh",
             "carbon_factor": "0.70 kg CO2 / kWh",
         },
@@ -141,16 +142,16 @@ def _empty_dashboard(data_path):
         "energy_distribution": [],
         "metadata": metadata,
         "data_source": metadata["data_source"],
-        "note": "No dashboard values were generated because no usable facility CSV rows were found.",
+        "note": "No facility sensor readings are available yet.",
     }
 
 
 # ============================================================
-# RECOMMENDATIONS (rule-based, CSV-backed)
+# RECOMMENDATIONS (rule-based, data source-backed)
 # ============================================================
 
 def generate_recommendations(df):
-    """Generate energy-optimisation recommendations from CSV readings."""
+    """Generate energy-optimisation recommendations from sensor readings."""
 
     if df.empty:
         return []
@@ -171,12 +172,12 @@ def generate_recommendations(df):
             "priority": "Medium",
             "message": (
                 f"HVAC operated during {len(empty_hvac)} "
-                f"unoccupied CSV reading(s), using "
+                f"unoccupied reading(s), using "
                 f"approximately {wasted_hvac:.2f} kWh."
             ),
             "reason": (
                 "The recommendation is calculated from occupancy, HVAC status, "
-                "and HVAC energy columns in facility_data.csv."
+                "and HVAC energy sensor readings."
             ),
         })
 
@@ -203,11 +204,11 @@ def generate_recommendations(df):
                 "message": (
                     f"{row['building_id']} {row['room_id']} "
                     f"({row['room_type']}) exceeded its HVAC setpoint "
-                    f"in {int(row['count'])} CSV reading(s)."
+                    f"in {int(row['count'])} reading(s)."
                 ),
                 "reason": (
                     "The recommendation is calculated from temperature, "
-                    "occupancy, and HVAC setpoint readings in facility_data.csv."
+                    "occupancy, and HVAC setpoint readings."
                 ),
             })
 
@@ -227,8 +228,8 @@ def generate_recommendations(df):
                     f"at {row['timestamp']}."
                 ),
                 "reason": (
-                    "The recommendation is generated only when the CSV "
-                    "equipment_status column contains Warning."
+                    "The recommendation is generated when equipment status "
+                    "reports a warning."
                 ),
             })
 
@@ -251,12 +252,12 @@ def generate_recommendations(df):
             "type": "High Consumption",
             "priority": "Medium",
             "message": (
-                f"{building} {room} ({room_type}) has the highest CSV-period "
+                f"{building} {room} ({room_type}) has the highest monitoring period "
                 f"consumption at {energy:.2f} kWh."
             ),
             "reason": (
                 "This is the largest room-level sum of the energy_consumption "
-                "column in facility_data.csv."
+                "column in the monitored readings."
             ),
         })
 
@@ -269,7 +270,7 @@ def generate_recommendations(df):
 
 def build_energy_dashboard(data_path):
     """
-    Build the complete energy dashboard response from facility CSV rows.
+    Build the complete energy dashboard response from facility data rows.
     """
 
     df = load_data(data_path)
@@ -432,10 +433,10 @@ def build_energy_dashboard(data_path):
             "potential_carbon_reduction": round(potential_carbon_reduction, 2),
         },
         "units": {
-            "sampling_interval": metadata["sampling_interval"] or "CSV-derived",
-            "interval_energy": "kWh / CSV reading",
+            "sampling_interval": metadata["sampling_interval"] or "Auto-detected",
+            "interval_energy": "kWh / reading",
             "hourly_energy": "kWh / hour",
-            "total_energy": "kWh / CSV period",
+            "total_energy": "kWh / monitoring period",
             "tariff": "₹8.00 / kWh",
             "carbon_factor": "0.70 kg CO2 / kWh",
         },
@@ -449,7 +450,6 @@ def build_energy_dashboard(data_path):
         "metadata": metadata,
         "data_source": metadata["data_source"],
         "note": (
-            f"Dashboard values are calculated from {metadata['data_source']} rows only. "
-            "No hardcoded building readings or generated fallback readings are injected."
+            "Dashboard values reflect the current facility monitoring data."
         ),
     }

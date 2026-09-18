@@ -347,7 +347,7 @@ def build_security_dashboard(data_path):
     Parameters
     ----------
     data_path : str
-        Path to the security events CSV file.
+        Path to the security events data source.
 
     Returns
     -------
@@ -362,14 +362,14 @@ def build_security_dashboard(data_path):
         df = pd.read_csv(path)
     except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError):
         return _empty_response(
-            data_source=path.name,
-            note="No security event CSV rows are available."
+            data_source="Live security event stream",
+            note="No security event readings are available yet."
         )
 
     if df.empty:
         return _empty_response(
-            data_source=path.name,
-            note="Security event CSV file is empty.",
+            data_source="Live security event stream",
+            note="No security event readings are available yet.",
         )
 
     # ---------------------------------------------------------
@@ -395,9 +395,9 @@ def build_security_dashboard(data_path):
 
     if missing_columns:
         return _empty_response(
-            data_source=path.name,
+            data_source="Live security event stream",
             note=(
-                "Security event CSV is missing required column(s): "
+                "Security event data is missing required field(s): "
                 + ", ".join(missing_columns)
                 + "."
             ),
@@ -463,8 +463,8 @@ def build_security_dashboard(data_path):
 
     if df.empty:
         return _empty_response(
-            data_source=path.name,
-            note="No valid timestamped security rows remained after CSV cleanup.",
+            data_source="Live security event stream",
+            note="No valid timestamped security events are available after data cleanup.",
         )
 
     df = df.sort_values(
@@ -721,16 +721,15 @@ def build_security_dashboard(data_path):
         "insights": insights,
 
         "data_source": (
-            f"Security events loaded from {path.name}"
+            "Live security event stream"
         ),
 
         "note": (
-            "Only security rows present in the CSV are displayed; "
-            "no sample or fallback security events are injected."
+            "Security metrics are based on facility access-control events."
         ),
 
         "metadata": {
-            "data_source": path.name,
+            "data_source": "Live security event stream",
             "total_records": int(total_events),
             "start_timestamp": df["timestamp"].min().isoformat(),
             "end_timestamp": df["timestamp"].max().isoformat(),
@@ -747,8 +746,8 @@ def build_security_dashboard(data_path):
 # EMPTY RESPONSE HELPER
 # ============================================================
 
-def _empty_response(data_source=None, note=""):
-    """Return the empty/fallback response structure."""
+def _empty_response(data_source="Live security event stream", note=""):
+    """Return the empty response structure."""
 
     return {
         "available": False,

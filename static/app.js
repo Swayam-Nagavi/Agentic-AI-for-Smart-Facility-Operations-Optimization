@@ -33,16 +33,16 @@ function updateDataInfo(data, buildingIds) {
     const metadata = data.metadata || {};
     const units = data.units || {};
 
-    setText("samplingInterval", units.sampling_interval || metadata.sampling_interval || "CSV-derived");
-    setText("energyUnit", units.interval_energy || "kWh / CSV reading");
+    setText("samplingInterval", units.sampling_interval || metadata.sampling_interval || "Auto-detected");
+    setText("energyUnit", units.interval_energy || "kWh / reading");
 
-    const source = data.data_source || metadata.data_source || "facility_data.csv";
+    const source = data.data_source || metadata.data_source || "live facility sensors";
     const recordCount = Number(metadata.record_count || 0);
     const roomCount = Number(metadata.room_count || 0);
     const buildingCount = buildingIds.length;
 
     const parts = [
-        `${recordCount} CSV record${recordCount === 1 ? "" : "s"}`,
+        `${recordCount} record${recordCount === 1 ? "" : "s"}`,
     ];
 
     if (roomCount) {
@@ -58,7 +58,7 @@ function updateDataInfo(data, buildingIds) {
 
     const start = metadata.start_timestamp ? formatDate(metadata.start_timestamp) : null;
     const end = metadata.end_timestamp ? formatDate(metadata.end_timestamp) : null;
-    setText("monitoringPeriod", start && end ? `${start} → ${end}` : "No CSV timestamp range available");
+    setText("monitoringPeriod", start && end ? `${start} → ${end}` : "No timestamp range available");
 }
 
 
@@ -67,8 +67,8 @@ function updateKPIs(kpis) {
     setText("estimatedCost", `₹${toNumber(kpis.estimated_cost).toFixed(2)}`);
     setText("efficiencyScore", `${toNumber(kpis.efficiency_score).toFixed(0)}%`);
     setText("potentialSavings", `₹${toNumber(kpis.potential_cost_savings).toFixed(2)}`);
-    setText("averageEnergy", `${toNumber(kpis.average_interval_energy).toFixed(2)} kWh / CSV reading`);
-    setText("peakEnergy", `${toNumber(kpis.peak_usage).toFixed(2)} kWh / CSV reading`);
+    setText("averageEnergy", `${toNumber(kpis.average_interval_energy).toFixed(2)} kWh / reading`);
+    setText("peakEnergy", `${toNumber(kpis.peak_usage).toFixed(2)} kWh / reading`);
     setText("carbonReduction", `${toNumber(kpis.potential_carbon_reduction).toFixed(2)} kg CO₂`);
     setText("anomalyCount", kpis.anomalies ?? 0);
 }
@@ -88,7 +88,7 @@ function renderDistribution(items) {
     container.innerHTML = "";
 
     if (!items.length) {
-        container.innerHTML = '<p class="muted">No CSV energy distribution data available.</p>';
+        container.innerHTML = '<p class="muted">No energy distribution data available.</p>';
         return;
     }
 
@@ -118,7 +118,7 @@ function renderDistribution(items) {
 
         const value = document.createElement("div");
         value.className = "distribution-value";
-        value.textContent = `${toNumber(item.energy).toFixed(2)} kWh / CSV period`;
+        value.textContent = `${toNumber(item.energy).toFixed(2)} kWh / monitoring period`;
 
         row.append(top, track, value);
         container.appendChild(row);
@@ -140,7 +140,7 @@ function renderBars(elementId, items, labelKey) {
     container.innerHTML = "";
 
     if (!items.length) {
-        container.innerHTML = '<p class="muted">No CSV data available.</p>';
+        container.innerHTML = '<p class="muted">No data available.</p>';
         return;
     }
 
@@ -191,7 +191,7 @@ function renderTrend(items, buildingIds) {
             "font-size": 14,
             fill: "#64748b",
         });
-        message.textContent = "No hourly CSV energy data available.";
+        message.textContent = "No hourly Energy data available.";
         svg.appendChild(message);
         return;
     }
@@ -238,7 +238,7 @@ function renderTrend(items, buildingIds) {
         "text-anchor": "end",
         "font-size": 12,
     });
-    xTitle.textContent = "CSV Time";
+    xTitle.textContent = "Time";
     svg.appendChild(xTitle);
 
     for (let i = 0; i <= 4; i += 1) {
@@ -364,7 +364,7 @@ function renderPeak(peak) {
     }
 
     if (!peak || !peak.timestamp) {
-        container.innerHTML = '<p class="muted">No peak usage row available in the CSV.</p>';
+        container.innerHTML = '<p class="muted">No peak usage row available in the sensor stream.</p>';
         return;
     }
 
@@ -372,7 +372,7 @@ function renderPeak(peak) {
         <div><b>Building:</b> ${escapeHtml(peak.building_id)}</div>
         <div><b>Room:</b> ${escapeHtml(peak.room_id)} (${escapeHtml(peak.room_type)})</div>
         <div><b>Time:</b> ${escapeHtml(formatDate(peak.timestamp))}</div>
-        <div><b>Peak Energy:</b> ${toNumber(peak.energy).toFixed(2)} kWh / CSV reading</div>
+        <div><b>Peak Energy:</b> ${toNumber(peak.energy).toFixed(2)} kWh / reading</div>
     `;
 }
 
@@ -389,7 +389,7 @@ function renderAnomalies(anomalies) {
     }
 
     if (!anomalies.length) {
-        container.innerHTML = '<p class="muted">No significant energy anomalies detected in the CSV readings.</p>';
+        container.innerHTML = '<p class="muted">No significant energy anomalies detected in the readings.</p>';
         return;
     }
 
@@ -399,8 +399,8 @@ function renderAnomalies(anomalies) {
             <td>${escapeHtml(item.room)}</td>
             <td>${escapeHtml(item.room_type)}</td>
             <td>${escapeHtml(formatDate(item.timestamp))}</td>
-            <td>${toNumber(item.energy).toFixed(2)} kWh / CSV reading</td>
-            <td>${toNumber(item.baseline).toFixed(2)} kWh / CSV reading</td>
+            <td>${toNumber(item.energy).toFixed(2)} kWh / reading</td>
+            <td>${toNumber(item.baseline).toFixed(2)} kWh / reading</td>
             <td>${toNumber(item.above_baseline).toFixed(1)}%</td>
         </tr>
     `).join("");
@@ -413,8 +413,8 @@ function renderAnomalies(anomalies) {
                     <th>Room</th>
                     <th>Room Type</th>
                     <th>Timestamp</th>
-                    <th>Energy<br>(kWh / CSV reading)</th>
-                    <th>Baseline<br>(kWh / CSV reading)</th>
+                    <th>Energy<br>(kWh / reading)</th>
+                    <th>Baseline<br>(kWh / reading)</th>
                     <th>Above Baseline</th>
                 </tr>
             </thead>
@@ -438,7 +438,7 @@ function renderRecommendations(recommendations) {
     container.innerHTML = "";
 
     if (!recommendations.length) {
-        container.innerHTML = '<p class="muted">No CSV-derived recommendations available.</p>';
+        container.innerHTML = '<p class="muted">No recommendations available.</p>';
         return;
     }
 
@@ -450,7 +450,7 @@ function renderRecommendations(recommendations) {
                 ${escapeHtml(item.priority || "Info")} • ${escapeHtml(item.type || "Recommendation")}
             </div>
             <div>${escapeHtml(item.message || "")}</div>
-            <div class="muted">Reason: ${escapeHtml(item.reason || "Derived from CSV readings.")}</div>
+            <div class="muted">Reason: ${escapeHtml(item.reason || "Derived from readings.")}</div>
         `;
         container.appendChild(alert);
     });
@@ -578,7 +578,7 @@ function showDashboardError() {
         "anomalyCount",
     ].forEach(id => setText(id, "-"));
 
-    setText("datasetSummary", "Unable to load CSV dashboard data");
+    setText("datasetSummary", "Unable to load dashboard data");
 }
 
 

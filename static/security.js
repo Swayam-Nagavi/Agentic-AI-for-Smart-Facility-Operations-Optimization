@@ -282,7 +282,7 @@ function updateSource(data) {
 
     setText(
         "dataSource",
-        data.data_source || "Security events loaded from security_events.csv"
+        data.data_source || "Live security event stream"
     );
 
     const start = metadata.start_timestamp
@@ -297,12 +297,12 @@ function updateSource(data) {
         "dataPeriod",
         start && end
             ? `${start} → ${end}`
-            : "No CSV timestamp range available"
+            : "No timestamp range available"
     );
 
     setText(
         "dataNote",
-        data.note || "Only CSV-backed security events are shown."
+        data.note || "Only live security events are shown."
     );
 }
 

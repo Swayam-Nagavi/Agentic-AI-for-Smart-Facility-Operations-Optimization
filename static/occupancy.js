@@ -28,7 +28,7 @@ function updateKPIs(kpis) {
     setText("totalOccupancy", kpis.current_occupancy ?? 0);
     setText("averageOccupancy", formatNumber(kpis.average_occupancy, 2));
     setText("peakOccupancy", kpis.peak_occupancy ?? 0);
-    setText("occupancyRate", kpis.occupancy_rate == null ? "CSV capacity unavailable" : `${formatNumber(kpis.occupancy_rate, 1)}%`);
+    setText("occupancyRate", kpis.occupancy_rate == null ? "Capacity unavailable" : `${formatNumber(kpis.occupancy_rate, 1)}%`);
 }
 
 
@@ -53,7 +53,7 @@ function renderRooms(rooms) {
     if (!rooms.length) {
         zoneTable.innerHTML = `
             <tr>
-                <td colspan="6">No occupancy rows available in facility_data.csv.</td>
+                <td colspan="6">No occupancy data available.</td>
             </tr>
         `;
         return;
@@ -91,7 +91,7 @@ function renderCapacityAlerts(alerts) {
         alertsContainer.innerHTML = `
             <div class="alert">
                 <strong>No Capacity Alerts</strong>
-                <p>No CSV row reached 90% of the capacity recorded in facility_data.csv.</p>
+                <p>No monitored room reached 90% capacity.</p>
             </div>
         `;
         return;
@@ -115,7 +115,7 @@ function renderInsights(insights) {
 
     if (!insights.length) {
         insightsContainer.innerHTML = `
-            <div class="insight">No occupancy insights were generated from the CSV readings.</div>
+            <div class="insight">No occupancy insights were generated from the readings.</div>
         `;
         return;
     }
@@ -138,7 +138,7 @@ function renderRecommendations(insights) {
 
     if (!insights.length) {
         recommendations.innerHTML = `
-            <div class="recommendation">No CSV-derived occupancy recommendations available.</div>
+            <div class="recommendation">No occupancy recommendations available.</div>
         `;
         return;
     }
@@ -164,7 +164,7 @@ function renderHourlyOccupancy(roomData) {
 
     if (!roomData.length) {
         container.innerHTML = `
-            <div class="insight">No hourly occupancy rows are available in the CSV.</div>
+            <div class="insight">No hourly occupancy rows are available in the sensor stream.</div>
         `;
         return;
     }
@@ -224,12 +224,12 @@ function renderHourlyOccupancy(roomData) {
 
 function updateSource(data) {
     const metadata = data.metadata || {};
-    setText("dataSource", data.data_source || "Occupancy readings loaded from facility_data.csv");
+    setText("dataSource", data.data_source || "Live occupancy sensor readings");
 
     const start = metadata.start_timestamp ? formatDate(metadata.start_timestamp) : null;
     const end = metadata.end_timestamp ? formatDate(metadata.end_timestamp) : null;
-    setText("dataPeriod", start && end ? `${start} → ${end}` : "No CSV timestamp range available");
-    setText("dataNote", data.note || "Only CSV-backed occupancy readings are shown.");
+    setText("dataPeriod", start && end ? `${start} → ${end}` : "No timestamp range available");
+    setText("dataNote", data.note || "Only live occupancy readings are shown.");
 }
 
 
@@ -243,7 +243,7 @@ function showError() {
     const insights = document.getElementById("insights");
 
     if (insights) {
-        insights.innerHTML = `<div class="insight">Failed to load occupancy CSV data.</div>`;
+        insights.innerHTML = `<div class="insight">Failed to load occupancy data.</div>`;
     }
 }
 

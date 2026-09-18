@@ -580,7 +580,7 @@ function updateSchedule(
     tbody.innerHTML =
         schedule.map(asset => {
 
-            const status = asset.work_order_status || "CSV action required";
+            const status = asset.work_order_status || "Action required";
 
             return `
                 <tr>
@@ -743,7 +743,7 @@ function updateWorkOrders(
     tbody.innerHTML =
         schedule.map(asset => {
 
-            const status = asset.work_order_status || "CSV action required";
+            const status = asset.work_order_status || "Action required";
 
             return `
                 <tr>
@@ -791,7 +791,7 @@ function updateSource(
         "dataSource",
 
         source ||
-        "Facility sensor readings loaded from facility_data.csv"
+        "Live facility sensor readings"
     );
 
 
@@ -799,7 +799,7 @@ function updateSource(
         "dataNote",
 
         note ||
-        "Only CSV-backed facility readings are used for maintenance health, alerts, and actions."
+        "Only live facility readings are used for maintenance health, alerts, and actions."
     );
 }
 

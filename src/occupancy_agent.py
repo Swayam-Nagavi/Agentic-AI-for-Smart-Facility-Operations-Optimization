@@ -217,7 +217,7 @@ def _utilization(occupancy, capacity):
     return round(min(float(occupancy) / float(capacity) * 100, 100), 2)
 
 
-def _status_from_csv_values(occupancy, capacity):
+def _status_from_reading_values(occupancy, capacity):
     if occupancy <= 0:
         return "Vacant"
 
@@ -238,7 +238,8 @@ def _status_from_csv_values(occupancy, capacity):
 
 
 def _build_metadata(df, data_path, has_capacity=False):
-    source_name = Path(data_path).name if data_path else "facility_data.csv"
+    source_name = "Live occupancy sensor readings"
+    source_file = Path(data_path).name if data_path else None
 
     if df.empty:
         return {
@@ -248,7 +249,7 @@ def _build_metadata(df, data_path, has_capacity=False):
             "room_count": 0,
             "start_timestamp": None,
             "end_timestamp": None,
-            "capacity_from_csv": bool(has_capacity),
+            "capacity_from_data": bool(has_capacity),
         }
 
     timestamps = df["timestamp"].dropna()
@@ -266,13 +267,13 @@ def _build_metadata(df, data_path, has_capacity=False):
         "room_count": room_count,
         "start_timestamp": timestamps.min().isoformat() if not timestamps.empty else None,
         "end_timestamp": timestamps.max().isoformat() if not timestamps.empty else None,
-        "capacity_from_csv": bool(has_capacity),
+        "capacity_from_data": bool(has_capacity),
     }
 
 
 def build_occupancy_dashboard(data_path):
     """
-    Build the complete occupancy dashboard response from facility_data.csv.
+    Build the complete occupancy dashboard response from facility readings.
 
     No display values are invented for missing readings. In particular, missing
     hourly readings are omitted instead of being filled with zero, and latest
@@ -286,13 +287,13 @@ def build_occupancy_dashboard(data_path):
     except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError):
         return _empty_response(
             data_source=path.name,
-            note="No usable occupancy data was found in the facility CSV file.",
+            note="No usable occupancy data is available yet.",
         )
 
     if df.empty:
         return _empty_response(
             data_source=path.name,
-            note="The facility CSV file is empty.",
+            note="No occupancy readings are available yet.",
         )
 
     required_columns = [
@@ -308,7 +309,7 @@ def build_occupancy_dashboard(data_path):
         return _empty_response(
             data_source=path.name,
             note=(
-                "The facility CSV file is missing required occupancy column(s): "
+                "Occupancy data is missing required field(s): "
                 + ", ".join(missing_columns)
                 + "."
             ),
@@ -339,7 +340,7 @@ def build_occupancy_dashboard(data_path):
     if df.empty:
         return _empty_response(
             data_source=path.name,
-            note="No valid occupancy rows remained after CSV cleanup.",
+            note="No valid occupancy readings are available after data cleanup.",
         )
 
     df["occupancy"] = df["occupancy"].clip(lower=0)
@@ -350,7 +351,7 @@ def build_occupancy_dashboard(data_path):
 
     # ---------------------------------------------------------
     # Hourly occupancy for each room. Only hours present in the
-    # CSV are returned; no missing hour is filled with fake zeroes.
+    # data are returned; no missing hour is filled with fake zeroes.
     # ---------------------------------------------------------
     hourly = (
         df.groupby(
@@ -402,7 +403,7 @@ def build_occupancy_dashboard(data_path):
 
     # ---------------------------------------------------------
     # Latest reading for current status. Values remain exactly
-    # based on the latest CSV row for each room.
+    # based on the latest sensor reading for each room.
     # ---------------------------------------------------------
     latest = (
         df.sort_values("timestamp")
@@ -424,7 +425,7 @@ def build_occupancy_dashboard(data_path):
     )
 
     latest["status"] = latest.apply(
-        lambda row: _status_from_csv_values(row["occupancy"], row["capacity"]),
+        lambda row: _status_from_reading_values(row["occupancy"], row["capacity"]),
         axis=1,
     )
 
@@ -524,7 +525,7 @@ def build_occupancy_dashboard(data_path):
 
     # ---------------------------------------------------------
     # Capacity alerts. These are emitted only when a capacity
-    # column exists in the CSV.
+    # column exists in the data source.
     # ---------------------------------------------------------
     capacity_alerts = []
 
@@ -551,13 +552,13 @@ def build_occupancy_dashboard(data_path):
                 severity = "High"
                 message = (
                     f'{row["building_id"]} {row["room_id"]} exceeded '
-                    "the capacity recorded in the CSV."
+                    "the configured room capacity."
                 )
             elif utilization >= 90:
                 severity = "Medium"
                 message = (
                     f'{row["building_id"]} {row["room_id"]} reached '
-                    f"{round(utilization)}% of the capacity recorded in the CSV."
+                    f"{round(utilization)}% of the configured room capacity."
                 )
             else:
                 continue
@@ -588,7 +589,7 @@ def build_occupancy_dashboard(data_path):
         insights.append({
             "type": "Peak Hour",
             "severity": "Info",
-            "message": f"The busiest observed hour in the CSV was {peak_hour}.",
+            "message": f"The busiest observed hour was {peak_hour}.",
         })
 
     if most_occupied_room:
@@ -598,7 +599,7 @@ def build_occupancy_dashboard(data_path):
             "message": (
                 f'{most_occupied_room["building_id"]} '
                 f'{most_occupied_room["room_id"]} has the highest average '
-                f'CSV occupancy of {most_occupied_room["average_occupancy"]}.'
+                f'occupancy of {most_occupied_room["average_occupancy"]}.'
             ),
         })
 
@@ -608,7 +609,7 @@ def build_occupancy_dashboard(data_path):
             "severity": "High",
             "message": (
                 f"{len(capacity_alerts)} room(s) reached 90% or more of "
-                "the capacity recorded in the CSV."
+                "the configured room capacity."
             ),
         })
 
@@ -616,14 +617,14 @@ def build_occupancy_dashboard(data_path):
         insights.append({
             "type": "Current Status",
             "severity": "Info",
-            "message": f"{vacant_rooms} room(s) are vacant in the latest CSV readings.",
+            "message": f"{vacant_rooms} room(s) are vacant in the latest sensor readings.",
         })
 
     if not has_capacity:
         insights.append({
             "type": "Capacity Data",
             "severity": "Info",
-            "message": "No capacity column is present in the CSV, so utilization and capacity alerts are not calculated.",
+            "message": "Room capacity is unavailable, so utilization and capacity alerts are not calculated.",
         })
 
     return {
@@ -651,10 +652,10 @@ def build_occupancy_dashboard(data_path):
         "capacity_alerts": capacity_alerts,
         "insights": insights,
         "metadata": metadata,
-        "data_source": f"Occupancy readings loaded from {path.name}",
+        "data_source": "Live occupancy sensor readings",
         "note": (
-            f"All occupancy counts come from {path.name}. Missing hours are omitted, "
-            "not filled with zero, and latest room occupancy is not overwritten by defaults."
+            "Current status uses the latest room reading, and occupancy "
+            "analytics use observed readings only."
         ),
     }
 
@@ -663,7 +664,7 @@ def build_occupancy_dashboard(data_path):
 # EMPTY RESPONSE HELPER
 # ============================================================
 
-def _empty_response(data_source="facility_data.csv", note=""):
+def _empty_response(data_source="Live occupancy sensor readings", note=""):
     """Return the empty response structure without fake occupancy rows."""
 
     return {
@@ -691,14 +692,14 @@ def _empty_response(data_source="facility_data.csv", note=""):
         "capacity_alerts": [],
         "insights": [],
         "metadata": {
-            "data_source": data_source,
+            "data_source": "Live occupancy sensor readings",
             "total_records": 0,
             "building_ids": [],
             "room_count": 0,
             "start_timestamp": None,
             "end_timestamp": None,
-            "capacity_from_csv": False,
+            "capacity_from_data": False,
         },
-        "data_source": f"Occupancy readings loaded from {data_source}",
-        "note": note or "No occupancy readings were generated for the dashboard.",
+        "data_source": "Live occupancy sensor readings",
+        "note": note or "No occupancy readings are available yet.",
     }

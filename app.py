@@ -130,8 +130,8 @@ def health_check():
             "security": True,
         },
         "data_sources": {
-            "facility": str(FACILITY_DATA_PATH.name),
-            "security": str(SECURITY_DATA_PATH.name),
+            "facility": "ready",
+            "security": "ready",
         },
     })
 

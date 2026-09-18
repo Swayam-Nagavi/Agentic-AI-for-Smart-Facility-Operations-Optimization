@@ -376,7 +376,7 @@ def analyze_facility_assets(
         ):
 
             prediction_recommendation = (
-                "CSV-based features indicate the "
+                "Sensor-based features indicate the "
                 "next equipment condition may "
                 "deteriorate. Consider preventive "
                 "inspection."
@@ -387,7 +387,7 @@ def analyze_facility_assets(
         ):
 
             prediction_recommendation = (
-                "CSV-based features indicate the "
+                "Sensor-based features indicate the "
                 "next equipment condition may "
                 "improve."
             )
@@ -395,7 +395,7 @@ def analyze_facility_assets(
         elif predicted_condition == "Stable":
 
             prediction_recommendation = (
-                "CSV-based features indicate the "
+                "Sensor-based features indicate the "
                 "next equipment condition may "
                 "remain stable."
             )
@@ -405,7 +405,7 @@ def analyze_facility_assets(
             prediction_recommendation = (
                 "Future condition prediction is "
                 "unavailable; current health still "
-                "uses the latest CSV readings."
+                "uses the latest sensor readings."
             )
 
 
@@ -462,7 +462,7 @@ def analyze_facility_assets(
 
                 "work_order_status":
                     (
-                        "CSV action required"
+                        "Action required"
                         if maintenance_required
                         else
                         "No action required"
@@ -558,8 +558,7 @@ def analyze_facility_assets(
 
                 "prediction_basis":
                     (
-                        "Future condition is predicted from feature columns "
-                        "calculated from facility_data.csv."
+                        "Future condition is predicted from live equipment sensor features."
                         if model is not None
                         else f"Future condition model unavailable: {model_error}"
                     ),
@@ -775,7 +774,7 @@ def build_maintenance_dashboard(
 
 
         "metadata": {
-            "data_source": path.name,
+            "data_source": "Live facility sensor readings",
             "assets_monitored": len(assets),
             "total_observations": sum(
                 int(asset.get("observations", 0))
@@ -785,13 +784,11 @@ def build_maintenance_dashboard(
 
 
         "data_source":
-            f"Facility sensor readings loaded from {path.name}",
+            "Live facility sensor readings",
 
 
         "note":
             (
-                "Maintenance health, alerts, and schedules are calculated from "
-                f"{path.name} readings only. No default assets, work orders, "
-                "or fallback fault records are injected."
+                "Maintenance health, alerts, and actions are calculated from live facility readings."
             ),
     }

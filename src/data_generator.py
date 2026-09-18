@@ -37,6 +37,8 @@ BUILDINGS = {
     "B003": {"efficiency": 0.94, "outdoor_offset": -0.4},
 }
 
+MAX_VACANT_ROOMS_PER_INTERVAL = 4
+
 
 def outdoor_conditions(hour):
     temperature = (
@@ -51,6 +53,16 @@ def outdoor_conditions(hour):
     humidity = max(35, min(85, humidity))
 
     return round(temperature, 2), round(humidity, 2)
+
+
+def minimum_operational_occupancy(room_type):
+    if room_type == "Server Room":
+        return random.choice([1, 1, 2])
+
+    if room_type == "Meeting Room":
+        return random.randint(1, 4)
+
+    return random.randint(1, 6)
 
 
 def occupancy_for_room(room_type, timestamp):
@@ -240,30 +252,29 @@ def generate_facility_data():
     for interval in range(96):
         timestamp = start_time + timedelta(minutes=15 * interval)
 
-        # Pre-compute occupancies for this interval to guarantee facility occupancy rules:
-        # 1. Total facility occupancy is never 0 (some occupancy at all times).
-        # 2. Some rooms can be 0 (vacant), but not all rooms.
+        # Pre-compute occupancies for this interval and enforce the
+        # facility-level rule: across the 9 monitored rooms, no more than
+        # 4 rooms can be vacant at the same timestamp.
         interval_occupancies = {}
         for building_id in BUILDINGS:
             for room_id in ROOMS:
                 key = (building_id, room_id)
                 interval_occupancies[key] = occupancy_for_room(ROOMS[room_id]["room_type"], timestamp)
 
-        # Ensure rule: Total occupancy is never 0 at any time, and at least 2-3 rooms are active
-        if sum(interval_occupancies.values()) < 3:
-            # Round-the-clock facility monitoring/security/operations in select rooms:
-            # B001 - R001 (Operations Desk): 2-3 occupants
-            # B002 - R003 (Server Room monitoring): 1 occupant
-            # B003 - R001 (Facility Maintenance): 2 occupants
-            # The remaining 6 rooms stay at 0 (vacant)
-            interval_occupancies[("B001", "R001")] = max(interval_occupancies.get(("B001", "R001"), 0), 2)
-            interval_occupancies[("B002", "R003")] = max(interval_occupancies.get(("B002", "R003"), 0), 1)
-            interval_occupancies[("B003", "R001")] = max(interval_occupancies.get(("B003", "R001"), 0), 2)
+        vacant_keys = [
+            key
+            for key, occupancy in interval_occupancies.items()
+            if occupancy <= 0
+        ]
 
-        # Ensure rule: Some rooms can be 0 (never all 9 rooms occupied simultaneously)
-        if all(occ > 0 for occ in interval_occupancies.values()):
-            interval_occupancies[("B001", "R002")] = 0
-            interval_occupancies[("B002", "R002")] = 0
+        if len(vacant_keys) > MAX_VACANT_ROOMS_PER_INTERVAL:
+            random.shuffle(vacant_keys)
+            rooms_to_activate = len(vacant_keys) - MAX_VACANT_ROOMS_PER_INTERVAL
+
+            for key in vacant_keys[:rooms_to_activate]:
+                _, room_id = key
+                room_type = ROOMS[room_id]["room_type"]
+                interval_occupancies[key] = minimum_operational_occupancy(room_type)
 
         for building_id in BUILDINGS:
             for room_id in ROOMS:
