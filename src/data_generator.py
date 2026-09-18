@@ -60,7 +60,16 @@ def occupancy_for_room(room_type, timestamp):
     if room_type == "Server Room":
         if 8 <= hour < 20:
             return random.choices([0, 1, 2], weights=[0.55, 0.35, 0.10])[0]
-        return random.choices([0, 1], weights=[0.90, 0.10])[0]
+        return random.choices([0, 1], weights=[0.85, 0.15])[0]
+
+    # Night / off-peak hours (before 7am or after 8pm)
+    if hour < 7 or hour >= 20:
+        if room_type == "Meeting Room":
+            return 0  # Meeting rooms vacant at night
+        # Office: small likelihood of late shift / security / maintenance staff
+        if random.random() < 0.25:
+            return random.randint(1, 3)
+        return 0
 
     if not weekday:
         probability = 0.15 if 9 <= hour < 17 else 0.03
@@ -76,7 +85,7 @@ def occupancy_for_room(room_type, timestamp):
         elif 17 <= hour < 19:
             probability = 0.35
         else:
-            probability = 0.05
+            probability = 0.15
 
     capacity = 12 if room_type == "Office" else 10
 
@@ -87,14 +96,17 @@ def occupancy_for_room(room_type, timestamp):
     return max(1, min(capacity, occupancy))
 
 
-def generate_room(building_id, room_id, timestamp, previous_temperature=None):
+def generate_room(building_id, room_id, timestamp, previous_temperature=None, forced_occupancy=None):
     room = ROOMS[room_id]
     building = BUILDINGS[building_id]
 
     outdoor_temperature, outdoor_humidity = outdoor_conditions(timestamp.hour)
     outdoor_temperature += building["outdoor_offset"]
 
-    occupancy = occupancy_for_room(room["room_type"], timestamp)
+    if forced_occupancy is not None:
+        occupancy = forced_occupancy
+    else:
+        occupancy = occupancy_for_room(room["room_type"], timestamp)
     setpoint = 22 if room["room_type"] == "Server Room" else 24
 
     heat_gain = max(0, outdoor_temperature - setpoint) * 0.035
@@ -227,6 +239,31 @@ def generate_facility_data():
     for interval in range(96):
         timestamp = start_time + timedelta(minutes=15 * interval)
 
+        # Pre-compute occupancies for this interval to guarantee facility occupancy rules:
+        # 1. Total facility occupancy is never 0 (some occupancy at all times).
+        # 2. Some rooms can be 0 (vacant), but not all rooms.
+        interval_occupancies = {}
+        for building_id in BUILDINGS:
+            for room_id in ROOMS:
+                key = (building_id, room_id)
+                interval_occupancies[key] = occupancy_for_room(ROOMS[room_id]["room_type"], timestamp)
+
+        # Ensure rule: Total occupancy is never 0 at any time, and at least 2-3 rooms are active
+        if sum(interval_occupancies.values()) < 3:
+            # Round-the-clock facility monitoring/security/operations in select rooms:
+            # B001 - R001 (Operations Desk): 2-3 occupants
+            # B002 - R003 (Server Room monitoring): 1 occupant
+            # B003 - R001 (Facility Maintenance): 2 occupants
+            # The remaining 6 rooms stay at 0 (vacant)
+            interval_occupancies[("B001", "R001")] = max(interval_occupancies.get(("B001", "R001"), 0), 2)
+            interval_occupancies[("B002", "R003")] = max(interval_occupancies.get(("B002", "R003"), 0), 1)
+            interval_occupancies[("B003", "R001")] = max(interval_occupancies.get(("B003", "R001"), 0), 2)
+
+        # Ensure rule: Some rooms can be 0 (never all 9 rooms occupied simultaneously)
+        if all(occ > 0 for occ in interval_occupancies.values()):
+            interval_occupancies[("B001", "R002")] = 0
+            interval_occupancies[("B002", "R002")] = 0
+
         for building_id in BUILDINGS:
             for room_id in ROOMS:
                 key = (building_id, room_id)
@@ -236,6 +273,7 @@ def generate_facility_data():
                     room_id,
                     timestamp,
                     previous_temperatures.get(key),
+                    forced_occupancy=interval_occupancies[key],
                 )
 
                 previous_temperatures[key] = record["temperature"]

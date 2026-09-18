@@ -135,14 +135,22 @@ td {
 
 .normal {
   background: #dcfce7;
+  color: #166534;
 }
 
 .medium {
   background: #fef3c7;
+  color: #92400e;
 }
 
 .critical {
   background: #fee2e2;
+  color: #991b1b;
+}
+
+.vacant {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .alert {
@@ -254,4 +262,71 @@ body {
   body {
     padding-left: 190px;
   }
+}
+
+.hourly-occupancy-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hourly-room-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.hourly-room-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.hourly-room-title strong {
+  font-size: 14px;
+}
+
+.hourly-room-title span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.hourly-grid {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(38px, 1fr));
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.hour-cell {
+  min-width: 38px;
+  text-align: center;
+}
+
+.hour-label {
+  font-size: 9px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.hour-value {
+  padding: 7px 3px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.hour-value.low {
+  background: #ecfdf5;
+}
+
+.hour-value.medium {
+  background: #fef3c7;
+}
+
+.hour-value.high {
+  background: #fee2e2;
 }

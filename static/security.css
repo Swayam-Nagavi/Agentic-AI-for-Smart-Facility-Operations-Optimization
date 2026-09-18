@@ -115,19 +115,46 @@ h2 {
   background: #fce7f3;
 }
 
-.alert {
-  padding: 15px;
+.security-alert {
+  padding: 12px 15px;
   margin-bottom: 10px;
   border-radius: 8px;
   background: #fef3c7;
+  line-height: 1.5;
 }
 
-.alert.High {
+.security-alert:last-child {
+  margin-bottom: 0;
+}
+
+.security-alert.high {
   background: #fee2e2;
 }
 
-.alert.Critical {
+.security-alert.critical {
   background: #fce7f3;
+}
+
+.security-alert.medium {
+  background: #fef3c7;
+}
+
+.security-alert.low {
+  background: #e0f2fe;
+}
+
+.alert-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.alert-message {
+  margin-bottom: 3px;
+}
+
+.alert-meta {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .alert-title {

@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 import joblib
@@ -21,6 +22,7 @@ FEATURE_COLUMNS = [
 ]
 
 
+@lru_cache(maxsize=1)
 def load_future_condition_model(
     model_path=MODEL_PATH
 ):
@@ -88,18 +90,12 @@ def predict_future_condition(
         for column in FEATURE_COLUMNS
     ]
 
-    prediction = model.predict(
-        np.array([values])
-    )[0]
-
+    features = np.array([values])
     probabilities = {}
 
     if hasattr(model, "predict_proba"):
-        probability_values = (
-            model.predict_proba(
-                np.array([values])
-            )[0]
-        )
+        probability_values = model.predict_proba(features)[0]
+        prediction = model.classes_[np.argmax(probability_values)]
 
         for label, probability in zip(
             model.classes_,
@@ -109,6 +105,8 @@ def predict_future_condition(
                 float(probability) * 100,
                 1
             )
+    else:
+        prediction = model.predict(features)[0]
 
     return {
         "prediction": str(prediction),

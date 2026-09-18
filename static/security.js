@@ -1,170 +1,306 @@
-async function fetchJSON(url) {
-    const response = await fetch(url);
+document.addEventListener("DOMContentLoaded", () => {
+    loadSecurityDashboard();
+});
 
-    if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
+
+async function loadSecurityDashboard() {
+
+    try {
+        const response = await fetch("/api/security");
+
+        if (!response.ok) {
+            throw new Error("Failed to load security data");
+        }
+
+        const data = await response.json();
+
+        updateKPIs(data);
+        updateSeverity(data);
+        renderAlerts(data.alerts || []);
+        renderHighRiskEvents(data.high_risk_events || []);
+        renderInsights(data.insights || []);
+
+    } catch (error) {
+
+        console.error(
+            "Security dashboard error:",
+            error
+        );
+
+        document.getElementById("alerts").innerHTML =
+            "<p>Unable to load security data.</p>";
     }
-
-    return await response.json();
 }
 
-function getSummary(data) {
-    return data.summary || data;
+
+// ============================================================
+// KPI CARDS
+// ============================================================
+
+function updateKPIs(data) {
+
+    const kpis = data.kpis || {};
+
+    document.getElementById("totalEvents").textContent =
+        kpis.total_events ?? 0;
+
+    document.getElementById("unauthorizedEvents").textContent =
+        kpis.unauthorized_access ?? 0;
+
+    document.getElementById("highRiskEvents").textContent =
+        kpis.high_risk_events ?? 0;
+
+    document.getElementById("unauthorizedRate").textContent =
+        `${kpis.unauthorized_rate ?? 0}%`;
 }
+
+
+// ============================================================
+// SEVERITY
+// ============================================================
+
+function updateSeverity(data) {
+
+    const severity = data.severity || {};
+
+    document.getElementById("lowEvents").textContent =
+        severity.Low ?? 0;
+
+    document.getElementById("mediumEvents").textContent =
+        severity.Medium ?? 0;
+
+    document.getElementById("highEvents").textContent =
+        severity.High ?? 0;
+
+    document.getElementById("criticalEvents").textContent =
+        severity.Critical ?? 0;
+}
+
+
+// ============================================================
+// SECURITY ALERTS
+// ============================================================
 
 function renderAlerts(alerts) {
-    const container = document.getElementById("alerts");
 
-    if (!alerts || alerts.length === 0) {
+    const container =
+        document.getElementById("alerts");
+
+    if (!alerts.length) {
+
         container.innerHTML = `
-            <div class="insight">
-                No security alerts detected.
-            </div>
+            <p>No security alerts detected.</p>
         `;
+
         return;
     }
 
-    container.innerHTML = alerts.map(alert => `
-        <div class="alert ${alert.severity}">
-            <div class="alert-title">
-                ${alert.alert_type} — ${alert.severity}
+    container.innerHTML = alerts.map(alert => {
+
+        const eventType =
+            alert.event_type ||
+            alert.type ||
+            "Security Event";
+
+        const building =
+            alert.building_id ||
+            alert.facility_id ||
+            "Unknown";
+
+        const room =
+            alert.room_id ||
+            "Unknown";
+
+        const severity =
+            alert.severity ||
+            "Medium";
+
+        const timestamp =
+            formatTimestamp(alert.timestamp);
+
+        return `
+            <div class="security-alert ${severity.toLowerCase()}">
+
+                <div class="alert-title">
+                    ${escapeHtml(eventType)}
+                    - ${escapeHtml(severity)}
+                </div>
+
+                <div class="alert-message">
+                    Unauthorized access detected at
+                    ${escapeHtml(building)} -
+                    ${escapeHtml(room)}.
+                </div>
+
+                <div class="alert-meta">
+                    ${escapeHtml(timestamp)}
+                </div>
+
             </div>
+        `;
 
-            <div>${alert.message}</div>
-
-            <small>
-                Facility: ${alert.facility_id || "Unknown"}
-                ${alert.timestamp ? " | " + alert.timestamp : ""}
-            </small>
-        </div>
-    `).join("");
+    }).join("");
 }
 
+
+// ============================================================
+// HIGH-RISK EVENTS
+// ============================================================
+
 function renderHighRiskEvents(events) {
-    const table = document.getElementById("highRiskTable");
 
-    table.innerHTML = "";
+    const table =
+        document.getElementById("highRiskTable");
 
-    if (!events || events.length === 0) {
+    if (!events.length) {
+
         table.innerHTML = `
             <tr>
-                <td colspan="4">No high-risk events detected.</td>
+                <td colspan="4">
+                    No high-risk events detected.
+                </td>
             </tr>
         `;
+
         return;
     }
 
-    events.forEach(event => {
+    table.innerHTML = events.map(event => {
+
         const facility =
-            event.facility_id ||
             event.building_id ||
+            event.facility_id ||
+            event.facility ||
             "Unknown";
+
+        const room =
+            event.room_id || "";
 
         const eventType =
             event.event_type ||
             event.type ||
-            "Unknown";
+            "Security Event";
 
         const severity =
             event.severity ||
             "High";
 
-        table.innerHTML += `
+        const timestamp =
+            formatTimestamp(event.timestamp);
+
+        return `
             <tr>
-                <td>${facility}</td>
-                <td>${eventType}</td>
+
                 <td>
-                    <span class="badge badge-${severity.toLowerCase()}">
-                        ${severity}
+                    ${escapeHtml(facility)}
+                    ${room
+                        ? ` - ${escapeHtml(room)}`
+                        : ""}
+                </td>
+
+                <td>
+                    ${escapeHtml(eventType)}
+                </td>
+
+                <td>
+                    <span class="severity-badge ${severity.toLowerCase()}">
+                        ${escapeHtml(severity)}
                     </span>
                 </td>
-                <td>${event.timestamp || "-"}</td>
+
+                <td>
+                    ${escapeHtml(timestamp)}
+                </td>
+
             </tr>
         `;
-    });
+
+    }).join("");
 }
 
-function renderInsights(insights) {
-    const container = document.getElementById("insights");
 
-    if (!insights || insights.length === 0) {
+// ============================================================
+// SECURITY INSIGHTS
+// ============================================================
+
+function renderInsights(insights) {
+
+    const container =
+        document.getElementById("insights");
+
+    if (!insights.length) {
+
         container.innerHTML = `
-            <div class="insight">
-                No security insights available.
-            </div>
+            <p>No security insights available.</p>
         `;
+
         return;
     }
 
-    container.innerHTML = insights.map(item => `
-        <div class="insight">
-            ${item}
-        </div>
-    `).join("");
-}
+    container.innerHTML = insights.map(insight => {
 
-async function loadSecurity() {
-    try {
-        const data = await fetchJSON("/api/security");
+        if (typeof insight === "string") {
 
-        const summary = getSummary(data);
+            return `
+                <div class="insight">
+                    ${escapeHtml(insight)}
+                </div>
+            `;
+        }
 
-        document.getElementById("totalEvents").textContent =
-            summary.total_events ?? 0;
-
-        document.getElementById("unauthorizedEvents").textContent =
-            summary.unauthorized_access ?? 0;
-
-        const highRisk =
-            summary.high_risk_events || [];
-
-        document.getElementById("highRiskEvents").textContent =
-            highRisk.length;
-
-        const access =
-            summary.access_analysis || {};
-
-        document.getElementById("unauthorizedRate").textContent =
-            `${access.unauthorized_rate ?? 0}%`;
-
-        const severity =
-            summary.events_by_severity || {};
-
-        document.getElementById("lowEvents").textContent =
-            severity.Low ?? severity.low ?? 0;
-
-        document.getElementById("mediumEvents").textContent =
-            severity.Medium ?? severity.medium ?? 0;
-
-        document.getElementById("highEvents").textContent =
-            severity.High ?? severity.high ?? 0;
-
-        document.getElementById("criticalEvents").textContent =
-            severity.Critical ?? severity.critical ?? 0;
-
-        renderAlerts(summary.alerts || []);
-
-        renderHighRiskEvents(highRisk);
-
-        renderInsights(summary.insights || []);
-
-    } catch (error) {
-        console.error("Security error:", error);
-
-        document.getElementById("alerts").innerHTML = `
-            <div class="alert">
-                Security data is currently unavailable.
-            </div>
-        `;
-
-        document.getElementById("insights").innerHTML = `
+        return `
             <div class="insight">
-                Unable to load security information.
+
+                <strong>
+                    ${escapeHtml(
+                        insight.type ||
+                        "Security Insight"
+                    )}
+                </strong>
+
+                <p>
+                    ${escapeHtml(
+                        insight.message || ""
+                    )}
+                </p>
+
             </div>
         `;
-    }
+
+    }).join("");
 }
 
-loadSecurity();
 
-setInterval(loadSecurity, 30000);
+// ============================================================
+// TIMESTAMP
+// ============================================================
+
+function formatTimestamp(timestamp) {
+
+    if (!timestamp) {
+        return "Unknown time";
+    }
+
+    const date = new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+        return timestamp;
+    }
+
+    return date.toLocaleString();
+}
+
+
+// ============================================================
+// HTML SAFETY
+// ============================================================
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
