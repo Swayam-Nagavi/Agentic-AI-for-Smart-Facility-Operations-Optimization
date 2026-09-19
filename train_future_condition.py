@@ -11,98 +11,13 @@ from src.future_condition_model import (
     FEATURE_COLUMNS,
     build_features,
 )
+from src.health_scoring import calculate_condition_risk
 
 
 DATA_PATH = Path("facility_data.csv")
 MODEL_PATH = Path(
     "models/future_condition_model.pkl"
 )
-
-
-def calculate_condition_risk(row):
-    risk = 0.0
-
-    temperature = float(
-        row["temperature"]
-    )
-
-    humidity = float(
-        row["humidity"]
-    )
-
-    occupancy = float(
-        row["occupancy"]
-    )
-
-    energy = float(
-        row["energy_consumption"]
-    )
-
-    hvac_energy = float(
-        row["hvac_energy"]
-    )
-
-    hvac_status = str(
-        row["hvac_status"]
-    ).upper()
-
-    setpoint = float(
-        row["hvac_setpoint"]
-    )
-
-    equipment_status = str(
-        row["equipment_status"]
-    ).lower()
-
-
-    temperature_deviation = abs(
-        temperature - setpoint
-    )
-
-
-    if temperature_deviation > 3:
-        risk += 35
-
-    elif temperature_deviation > 2:
-        risk += 20
-
-    elif temperature_deviation > 1:
-        risk += 10
-
-
-    if humidity > 65 or humidity < 35:
-        risk += 25
-
-    elif humidity > 60 or humidity < 40:
-        risk += 10
-
-
-    if equipment_status == "fault":
-        risk += 50
-
-    elif equipment_status == "warning":
-        risk += 30
-
-
-    if (
-        hvac_status == "ON"
-        and occupancy > 0
-        and hvac_energy <= 0
-    ):
-        risk += 25
-
-
-    if energy > 1.30:
-        risk += 20
-
-    elif energy > 1.10:
-        risk += 10
-
-
-    return max(
-        0.0,
-        min(100.0, risk)
-    )
 
 
 def create_target(df):

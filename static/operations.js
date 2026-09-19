@@ -237,7 +237,7 @@ function renderTimeline(items) {
 
 
 function updateSource(data) {
-    setText("dataSource", data.data_source || "Live facility intelligence layer");
+    setText("dataSource", data.data_source || "Simulated facility intelligence layer (digital twin demo)");
     setText("dataNote", data.note || "Facility agents are coordinated into a unified operations layer.");
 }
 

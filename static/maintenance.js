@@ -791,7 +791,7 @@ function updateSource(
         "dataSource",
 
         source ||
-        "Live facility sensor readings"
+        "Simulated facility sensor readings (digital twin demo)"
     );
 
 

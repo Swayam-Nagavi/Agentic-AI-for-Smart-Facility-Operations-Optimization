@@ -224,7 +224,7 @@ function renderHourlyOccupancy(roomData) {
 
 function updateSource(data) {
     const metadata = data.metadata || {};
-    setText("dataSource", data.data_source || "Live occupancy sensor readings");
+    setText("dataSource", data.data_source || "Simulated occupancy sensor readings (digital twin demo)");
 
     const start = metadata.start_timestamp ? formatDate(metadata.start_timestamp) : null;
     const end = metadata.end_timestamp ? formatDate(metadata.end_timestamp) : null;

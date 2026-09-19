@@ -4,18 +4,25 @@ This adds the predictive-maintenance layer to the existing Energy Intelligence p
 
 ## What was added
 
-- Synthetic historical maintenance training dataset generator
-- Random Forest failure-risk model
-- Asset-level equipment health scoring (0–100)
+- Asset-level equipment health scoring (0–100) via transparent, rules-based
+  condition-risk scoring (`src/health_scoring.py`)
 - Excellent / Good / Warning / Critical health categories
-- Hybrid Maintenance Agent (ML risk + transparent safety rules)
-- Predictive maintenance alerts
-- Maintenance schedule recommendations
+- Alerts (current-condition events) distinct from the maintenance schedule
+  (forward-looking work plan, including assets predicted to deteriorate)
+- A Random Forest "future condition" model that predicts whether the rule
+  risk of the *next* reading improves / stays stable / deteriorates
 - Work-order generation/tracking
 - Predictive Maintenance Dashboard
 - `/api/maintenance/dashboard` API
 
-> The maintenance training data is synthetic and intended for a college/demo project. It must not be presented as real equipment-failure data.
+> **Status note (Phase A cleanup):** An earlier draft of this README claimed a
+> "Random Forest failure-risk model" powered the dashboard. A fault classifier
+> was trained on the public LBNL RTU dataset (`train_maintenance_model.py`),
+> but it was **never wired into the running app**; the unused loader module
+> and stale model artifacts were removed in Phase A. The trainer remains as a
+> documented offline experiment. The dashboard's health scoring is rule-based.
+
+> The maintenance data is synthetic and intended for a college/demo project. It must not be presented as real equipment-failure data.
 
 ## First-time setup in PowerShell
 
@@ -69,8 +76,11 @@ data is not overwritten.
 1. Reads the existing `facility_data.csv`.
 2. Aggregates observations per HVAC asset.
 3. Calculates condition features such as temperature deviation, HVAC runtime and equipment warnings.
-4. Sends those features to the trained Random Forest model.
-5. Adds a transparent rule-based safety layer for observable operating warnings.
+4. Scores current health with the transparent rule set in `src/health_scoring.py`.
+5. Predicts the next reading's condition direction (Improving / Stable /
+   Deteriorating) with the future-condition Random Forest trained by
+   `train_future_condition.py`.
 6. Produces a failure-risk percentage and risk level.
 7. Converts risk into a maintenance window.
-8. Generates alerts and work orders for the dashboard.
+8. Generates alerts (current condition) and scheduled work (including
+   predicted deterioration) for the dashboard.

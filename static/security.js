@@ -282,7 +282,7 @@ function updateSource(data) {
 
     setText(
         "dataSource",
-        data.data_source || "Live security event stream"
+        data.data_source || "Simulated security event stream (digital twin demo)"
     );
 
     const start = metadata.start_timestamp

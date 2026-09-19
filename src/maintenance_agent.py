@@ -21,96 +21,6 @@ FACILITY_DATA_PATH = Path(
 )
 
 
-def _condition_risk(row):
-
-    risk = 0.0
-
-    temperature = float(
-        row["temperature"]
-    )
-
-    humidity = float(
-        row["humidity"]
-    )
-
-    occupancy = float(
-        row["occupancy"]
-    )
-
-    energy = float(
-        row["energy_consumption"]
-    )
-
-    hvac_energy = float(
-        row["hvac_energy"]
-    )
-
-    hvac_status = str(
-        row["hvac_status"]
-    ).upper()
-
-    setpoint = float(
-        row["hvac_setpoint"]
-    )
-
-    equipment_status = str(
-        row["equipment_status"]
-    ).lower()
-
-
-    temperature_deviation = abs(
-        temperature - setpoint
-    )
-
-
-    if temperature_deviation > 3:
-        risk += 35
-
-    elif temperature_deviation > 2:
-        risk += 20
-
-    elif temperature_deviation > 1:
-        risk += 10
-
-
-    if humidity > 65 or humidity < 35:
-        risk += 25
-
-    elif humidity > 60 or humidity < 40:
-        risk += 10
-
-
-    if equipment_status == "fault":
-        risk += 50
-
-    elif equipment_status == "warning":
-        risk += 30
-
-
-    if (
-        hvac_status == "ON"
-        and occupancy > 0
-        and hvac_energy <= 0
-    ):
-        risk += 25
-
-
-    if energy > 1.30:
-        risk += 20
-
-    elif energy > 1.10:
-        risk += 10
-
-
-    return round(
-        max(
-            0.0,
-            min(100.0, risk)
-        ),
-        1
-    )
-
-
 def _maintenance_plan(score):
 
     if score < 30:
@@ -615,18 +525,79 @@ def build_maintenance_dashboard(
             ] += 1
 
 
+    # Alerts: current-condition events (what is wrong RIGHT NOW).
+    # Schedule: forward-looking work plan, which also includes assets whose
+    # predicted future condition is Deteriorating even if current health is OK.
+    def _alert_entry(asset):
+        severity = (
+            "Critical"
+            if asset["health_category"] == "Critical"
+            else "High"
+        )
+
+        details = []
+
+        if asset["equipment_status"].lower() in ("fault", "warning"):
+            details.append(
+                f"equipment status '{asset['equipment_status']}' in latest reading"
+            )
+
+        deviation = abs(asset["temperature"] - asset["hvac_setpoint"])
+
+        if deviation > 1.0:
+            details.append(
+                f"temperature {asset['temperature']}°C vs setpoint "
+                f"{asset['hvac_setpoint']}°C"
+            )
+
+        if asset["humidity"] > 65 or asset["humidity"] < 35:
+            details.append(f"humidity {asset['humidity']}% outside comfort band")
+
+        detail_text = ("; ".join(details)) or "elevated condition-risk score"
+
+        entry = dict(asset)
+        entry.update({
+            "alert_severity": severity,
+            "alert_timestamp": asset["timestamp"],
+            "alert_message": (
+                f"{asset['asset_id']}: health {asset['health_score']}/100 "
+                f"({asset['health_category']}) — {detail_text}."
+            ),
+        })
+
+        return entry
+
     alerts = [
-        asset
+        _alert_entry(asset)
         for asset in assets
         if asset["fault_detected"]
     ]
 
+    maintenance_recommendations = []
 
-    maintenance_recommendations = [
-        asset
-        for asset in assets
-        if asset["fault_detected"]
-    ]
+    for asset in assets:
+        if asset["fault_detected"]:
+            schedule_reason = "Current condition requires attention."
+        elif asset["future_condition"] == "Deteriorating":
+            schedule_reason = (
+                "Predicted to deteriorate; preventive inspection scheduled."
+            )
+        else:
+            continue
+
+        entry = dict(asset)
+        entry["schedule_reason"] = schedule_reason
+
+        if (
+            not asset["fault_detected"]
+            and asset["future_condition"] == "Deteriorating"
+        ):
+            entry["maintenance_due"] = "Preventive inspection"
+            entry["maintenance_window"] = "Next maintenance cycle"
+            entry["work_order_status"] = "Action required"
+            entry["priority"] = "Medium"
+
+        maintenance_recommendations.append(entry)
 
 
     deteriorating = [
@@ -774,7 +745,7 @@ def build_maintenance_dashboard(
 
 
         "metadata": {
-            "data_source": "Live facility sensor readings",
+            "data_source": "Simulated facility sensor readings (digital twin demo)",
             "assets_monitored": len(assets),
             "total_observations": sum(
                 int(asset.get("observations", 0))
@@ -784,11 +755,11 @@ def build_maintenance_dashboard(
 
 
         "data_source":
-            "Live facility sensor readings",
+            "Simulated facility sensor readings (digital twin demo)",
 
 
         "note":
             (
-                "Maintenance health, alerts, and actions are calculated from live facility readings."
+                "Maintenance health, alerts, and actions are calculated from simulated facility readings (digital twin demo)."
             ),
     }

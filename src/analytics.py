@@ -196,7 +196,12 @@ def add_baseline_comparison(df):
     return df
 
 
-def detect_anomalies(df):
+def detect_anomalies(df, limit=20):
+    """Return anomalous readings, sorted by severity.
+
+    ``limit`` caps the number of rows returned for display; pass
+    ``limit=None`` to get every anomalous row (e.g. for accurate counts).
+    """
     if df.empty:
         return add_baseline_comparison(df)
 
@@ -224,19 +229,10 @@ def detect_anomalies(df):
             ascending=False,
         )
 
-    return anomalies.head(20)
+    if limit is not None:
+        return anomalies.head(limit)
 
-
-def hourly_energy(df):
-    if df.empty:
-        return pd.Series(dtype="float64")
-
-    return (
-        df.set_index("timestamp")["energy_consumption"]
-        .resample("1h")
-        .sum()
-        .round(2)
-    )
+    return anomalies
 
 
 def calculate_energy_distribution(df):

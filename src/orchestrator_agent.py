@@ -9,9 +9,6 @@ results into cross-agent scores, prioritized actions, guardrails, and a concise
 operations timeline.
 """
 
-from datetime import datetime
-
-
 AGENT_LABELS = {
     "energy": "Energy Agent",
     "maintenance": "Maintenance Agent",
@@ -43,7 +40,8 @@ def build_operations_dashboard(energy, maintenance, occupancy, security):
     insights = _build_cross_agent_insights(energy, maintenance, occupancy, security)
     guardrails = _build_guardrails(energy, maintenance, occupancy, security)
     timeline = _build_timeline(energy, maintenance, occupancy, security)
-    decision_log = _build_decision_log(actions, domain_scores)
+    as_of = _latest_data_timestamp(energy, occupancy, security)
+    decision_log = _build_decision_log(actions, domain_scores, as_of=as_of)
 
     critical_actions = [
         action for action in actions
@@ -92,7 +90,8 @@ def build_operations_dashboard(energy, maintenance, occupancy, security):
         "guardrails": guardrails,
         "decision_log": decision_log,
         "timeline": timeline,
-        "data_source": "Live facility intelligence layer",
+        "data_as_of": as_of,
+        "data_source": "Simulated facility intelligence layer (digital twin demo)",
         "note": (
             "Milestone 4 coordinates all facility agents into one prioritized "
             "operations view with safety, comfort, energy, maintenance, and "
@@ -170,7 +169,6 @@ def _weighted_facility_score(domain_scores):
 def _occupancy_score(occupancy):
     kpis = occupancy.get("kpis", {})
     occupancy_rate = kpis.get("occupancy_rate")
-    capacity_alerts = occupancy.get("capacity_alerts", [])
 
     if occupancy_rate is None:
         score = 78.0
@@ -185,9 +183,20 @@ def _occupancy_score(occupancy):
         elif rate < 15:
             score -= (15 - rate) * 0.5
 
-    for alert in capacity_alerts:
-        severity = str(alert.get("severity", "Medium"))
-        score -= 12 if severity == "High" else 6
+    # Penalize CURRENT crowding using the latest per-room status, not the
+    # all-day peak-based capacity_alerts list (which flags nearly every room
+    # at some point in 24h and previously drove this score to 0).
+    penalty = 0.0
+
+    for room in occupancy.get("rooms", []):
+        status = room.get("status")
+
+        if status == "Over Capacity":
+            penalty += 15
+        elif status == "Near Capacity":
+            penalty += 5
+
+    score -= min(penalty, 50)
 
     return _clamp(score, 0, 100)
 
@@ -343,12 +352,18 @@ def _build_actions(energy, maintenance, occupancy, security):
     for recommendation in energy.get("recommendations", [])[:5]:
         recommendation_type = recommendation.get("type", "Energy Optimization")
         priority = _normalise_priority(recommendation.get("priority"))
+        target = recommendation.get("target")
+        title = (
+            f"{recommendation_type} — {target}"
+            if target
+            else recommendation_type
+        )
 
         actions.append(_action(
             priority=priority,
             domain="Energy",
             source_agents=["Energy", "Occupancy", "Maintenance"],
-            title=recommendation_type,
+            title=title,
             recommended_action=recommendation.get("message") or "Review energy optimization opportunity.",
             reason=recommendation.get("reason") or "Energy agent identified an optimization opportunity.",
             expected_impact="Reduces avoidable consumption while preserving comfort guardrails.",
@@ -485,8 +500,11 @@ def _build_guardrails(energy, maintenance, occupancy, security):
     return guardrails
 
 
-def _build_decision_log(actions, domain_scores):
-    now = datetime.now().replace(microsecond=0).isoformat()
+def _build_decision_log(actions, domain_scores, as_of=None):
+    # Timestamp decisions with the end of the data window they were derived
+    # from — never with wall-clock "now", which would claim decisions were
+    # made today about potentially stale sensor readings.
+    now = as_of or "unknown"
     log = []
 
     if actions:
@@ -541,7 +559,7 @@ def _build_timeline(energy, maintenance, occupancy, security):
             "severity": _priority_from_health(asset.get("health_category"), asset.get("priority")),
         })
 
-    for room in occupancy.get("rooms", []):
+    for room in occupancy.get("rooms", [])[:25]:
         if room.get("status") in ("High", "Near Capacity", "Over Capacity"):
             timeline.append({
                 "timestamp": room.get("timestamp"),
@@ -704,6 +722,22 @@ def _number(value, default=0.0):
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _latest_data_timestamp(energy, occupancy, security):
+    """Latest timestamp present in the underlying data, across domains."""
+    candidates = []
+
+    for payload in (energy, occupancy, security):
+        if not isinstance(payload, dict):
+            continue
+
+        end = payload.get("metadata", {}).get("end_timestamp")
+
+        if end:
+            candidates.append(str(end))
+
+    return max(candidates) if candidates else None
 
 
 def _clamp(value, minimum, maximum):

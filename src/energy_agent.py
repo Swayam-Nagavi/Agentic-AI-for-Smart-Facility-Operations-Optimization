@@ -73,7 +73,7 @@ def _infer_sampling_interval(df):
 
 def _build_metadata(df, data_path):
     path = Path(data_path)
-    display_source = "Live facility energy sensors"
+    display_source = "Simulated facility energy sensors (digital twin demo)"
 
     if df.empty:
         return {
@@ -120,6 +120,7 @@ def _empty_dashboard(data_path):
             "average_interval_energy": 0.0,
             "peak_usage": 0.0,
             "anomalies": 0,
+            "anomalies_shown": 0,
             "estimated_cost": 0.0,
             "potential_cost_savings": 0.0,
             "efficiency_score": 0.0,
@@ -170,6 +171,7 @@ def generate_recommendations(df):
         recommendations.append({
             "type": "HVAC Scheduling",
             "priority": "Medium",
+            "target": "Facility-wide",
             "message": (
                 f"HVAC operated during {len(empty_hvac)} "
                 f"unoccupied reading(s), using "
@@ -201,6 +203,7 @@ def generate_recommendations(df):
             recommendations.append({
                 "type": "Setpoint / HVAC Check",
                 "priority": "High",
+                "target": f"{row['building_id']} {row['room_id']}",
                 "message": (
                     f"{row['building_id']} {row['room_id']} "
                     f"({row['room_type']}) exceeded its HVAC setpoint "
@@ -240,6 +243,7 @@ def generate_recommendations(df):
             recommendations.append({
                 "type": "Equipment Investigation",
                 "priority": "Critical" if status == "fault" else "High",
+                "target": f"{row['building_id']} {row['room_id']}",
                 "message": (
                     f"{row['building_id']} {row['room_id']} "
                     f"({row['room_type']}) reported an equipment {status} "
@@ -269,6 +273,7 @@ def generate_recommendations(df):
         recommendations.append({
             "type": "High Consumption",
             "priority": "Medium",
+            "target": f"{building} {room}",
             "message": (
                 f"{building} {room} ({room_type}) has the highest monitoring period "
                 f"consumption at {energy:.2f} kWh."
@@ -304,7 +309,9 @@ def build_energy_dashboard(data_path):
     buildings = energy_by_building(df)
     rooms = energy_by_room(df)
     peak = peak_usage(df)
-    anomalies = detect_anomalies(df)
+    anomalies_all = detect_anomalies(df, limit=None)
+    anomaly_total_count = int(len(anomalies_all))
+    anomalies = anomalies_all.head(20)
     recommendations = generate_recommendations(df)
 
     distribution = calculate_energy_distribution(df)
@@ -350,12 +357,16 @@ def build_energy_dashboard(data_path):
 
     empty_hvac_ratio = empty_hvac_energy / total if total > 0 else 0
     anomaly_ratio = anomaly_excess / total if total > 0 else 0
+
+    equipment_status_lower = df["equipment_status"].astype(str).str.lower()
+
     warning_ratio = (
-        len(df[df["equipment_status"].astype(str).str.lower() == "warning"])
-        / len(df)
+        len(df[equipment_status_lower == "warning"]) / len(df)
         if len(df) > 0
         else 0
     )
+    fault_reading_count = int((equipment_status_lower == "fault").sum())
+    fault_ratio = fault_reading_count / len(df) if len(df) > 0 else 0
     hot_ratio = (
         len(df[df["temperature"] > df["hvac_setpoint"] + 1.5]) / len(df)
         if len(df) > 0
@@ -366,8 +377,15 @@ def build_energy_dashboard(data_path):
         empty_hvac_ratio * 30
         + anomaly_ratio * 30
         + warning_ratio * 10
+        + fault_ratio * 20
         + hot_ratio * 20
     )
+
+    # A facility with an active equipment fault must not be rated "Excellent",
+    # otherwise the KPI contradicts the fault alerts shown next to it.
+    if fault_reading_count > 0:
+        efficiency_score = min(efficiency_score, 84)
+
     efficiency_score = max(0, min(100, efficiency_score))
 
     potential_carbon_reduction = potential_savings_kwh * GRID_EMISSION_FACTOR_KG_PER_KWH
@@ -444,7 +462,8 @@ def build_energy_dashboard(data_path):
             "total_energy": total,
             "average_interval_energy": average,
             "peak_usage": peak["energy"],
-            "anomalies": len(anomaly_data),
+            "anomalies": anomaly_total_count,
+            "anomalies_shown": len(anomaly_data),
             "estimated_cost": round(estimated_cost, 2),
             "potential_cost_savings": round(potential_cost_savings, 2),
             "efficiency_score": round(efficiency_score, 1),
