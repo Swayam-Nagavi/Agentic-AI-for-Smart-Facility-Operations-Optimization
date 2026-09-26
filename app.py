@@ -2,19 +2,51 @@ from pathlib import Path
 
 from flask import Flask, jsonify, send_from_directory
 
-from src.csv_data_manager import ensure_facility_csv, ensure_security_csv
-from src.energy_agent import build_energy_dashboard
-from src.maintenance_agent import build_maintenance_dashboard
-from src.occupancy_agent import build_occupancy_dashboard
-from src.orchestrator_agent import build_operations_dashboard
-from src.security_agent import build_security_dashboard
+from src.csv_data_manager import (
+    ensure_facility_csv,
+    ensure_security_csv,
+)
+
+from src.energy_agent import (
+    build_energy_dashboard,
+)
+
+from src.maintenance_agent import (
+    build_maintenance_dashboard,
+)
+
+from src.occupancy_agent import (
+    build_occupancy_dashboard,
+)
+
+from src.orchestrator_agent import (
+    build_operations_dashboard,
+)
+
+from src.security_agent import (
+    build_security_dashboard,
+)
+
+from src.cost_optimization_agent import (
+    build_cost_optimization_dashboard,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
-FACILITY_DATA_PATH = BASE_DIR / "facility_data.csv"
-SECURITY_DATA_PATH = BASE_DIR / "security_events.csv"
 
-app = Flask(__name__, static_folder="static")
+FACILITY_DATA_PATH = (
+    BASE_DIR / "facility_data.csv"
+)
+
+SECURITY_DATA_PATH = (
+    BASE_DIR / "security_events.csv"
+)
+
+
+app = Flask(
+    __name__,
+    static_folder="static",
+)
 
 
 # ============================================================
@@ -22,61 +54,143 @@ app = Flask(__name__, static_folder="static")
 # ============================================================
 
 def build_dashboard_data():
-    """Build the energy dashboard from facility_data.csv.
+    ensure_facility_csv(
+        FACILITY_DATA_PATH
+    )
 
-    If the CSV has no usable rows, create the CSV data first and then read it.
-    """
-
-    ensure_facility_csv(FACILITY_DATA_PATH)
-    return build_energy_dashboard(FACILITY_DATA_PATH)
+    return build_energy_dashboard(
+        FACILITY_DATA_PATH
+    )
 
 
 def build_occupancy_data():
-    """Build the occupancy dashboard from facility_data.csv.
+    ensure_facility_csv(
+        FACILITY_DATA_PATH
+    )
 
-    If the CSV has no usable rows, create the CSV data first and then read it.
-    """
-
-    ensure_facility_csv(FACILITY_DATA_PATH)
-    return build_occupancy_dashboard(FACILITY_DATA_PATH)
+    return build_occupancy_dashboard(
+        FACILITY_DATA_PATH
+    )
 
 
 def build_maintenance_data():
-    """Build the maintenance dashboard from facility_data.csv.
+    ensure_facility_csv(
+        FACILITY_DATA_PATH
+    )
 
-    If the CSV has no usable rows, create the CSV data first and then read it.
-    """
-
-    ensure_facility_csv(FACILITY_DATA_PATH)
-    return build_maintenance_dashboard(FACILITY_DATA_PATH)
+    return build_maintenance_dashboard(
+        FACILITY_DATA_PATH
+    )
 
 
 def build_security_data():
-    """Build the security dashboard from security_events.csv.
+    ensure_security_csv(
+        SECURITY_DATA_PATH,
+        FACILITY_DATA_PATH,
+    )
 
-    If the CSV has no usable rows, create the CSV data first and then read it.
-    """
-
-    ensure_security_csv(SECURITY_DATA_PATH, FACILITY_DATA_PATH)
-    return build_security_dashboard(SECURITY_DATA_PATH)
+    return build_security_dashboard(
+        SECURITY_DATA_PATH
+    )
 
 
 def build_operations_data():
-    """Build the Milestone 4 multi-agent operations dashboard."""
+    """
+    Build the Milestone 4 multi-agent
+    operations + executive cost view.
+    """
 
-    ensure_facility_csv(FACILITY_DATA_PATH)
-    ensure_security_csv(SECURITY_DATA_PATH, FACILITY_DATA_PATH)
+    ensure_facility_csv(
+        FACILITY_DATA_PATH
+    )
 
-    energy = build_energy_dashboard(FACILITY_DATA_PATH)
-    maintenance = build_maintenance_dashboard(FACILITY_DATA_PATH)
-    occupancy = build_occupancy_dashboard(FACILITY_DATA_PATH)
-    security = build_security_dashboard(SECURITY_DATA_PATH)
+    ensure_security_csv(
+        SECURITY_DATA_PATH,
+        FACILITY_DATA_PATH,
+    )
 
-    return build_operations_dashboard(
+    energy = build_energy_dashboard(
+        FACILITY_DATA_PATH
+    )
+
+    maintenance = build_maintenance_dashboard(
+        FACILITY_DATA_PATH
+    )
+
+    occupancy = build_occupancy_dashboard(
+        FACILITY_DATA_PATH
+    )
+
+    security = build_security_dashboard(
+        SECURITY_DATA_PATH
+    )
+
+    operations = build_operations_dashboard(
         energy,
         maintenance,
         occupancy,
         security,
+    )
+
+    # Milestone 4 executive
+    # cost-optimization layer.
+    operations["cost_optimization"] = (
+        build_cost_optimization_dashboard(
+            energy,
+            maintenance,
+            occupancy,
+            security,
+            operations,
+        )
+    )
+
+    return operations
+
+
+def build_cost_optimization_data():
+    """
+    Build the standalone Milestone 4
+    cost optimization response.
+    """
+
+    ensure_facility_csv(
+        FACILITY_DATA_PATH
+    )
+
+    ensure_security_csv(
+        SECURITY_DATA_PATH,
+        FACILITY_DATA_PATH,
+    )
+
+    energy = build_energy_dashboard(
+        FACILITY_DATA_PATH
+    )
+
+    maintenance = build_maintenance_dashboard(
+        FACILITY_DATA_PATH
+    )
+
+    occupancy = build_occupancy_dashboard(
+        FACILITY_DATA_PATH
+    )
+
+    security = build_security_dashboard(
+        SECURITY_DATA_PATH
+    )
+
+    operations = build_operations_dashboard(
+        energy,
+        maintenance,
+        occupancy,
+        security,
+    )
+
+    return build_cost_optimization_dashboard(
+        energy,
+        maintenance,
+        occupancy,
+        security,
+        operations,
     )
 
 
@@ -86,17 +200,23 @@ def build_operations_data():
 
 @app.route("/api/dashboard")
 def dashboard_api():
-    return jsonify(build_dashboard_data())
+    return jsonify(
+        build_dashboard_data()
+    )
 
 
 @app.route("/api/maintenance/dashboard")
 def maintenance_dashboard_api():
-    return jsonify(build_maintenance_data())
+    return jsonify(
+        build_maintenance_data()
+    )
 
 
 @app.route("/api/occupancy")
 def occupancy_api():
-    return jsonify(build_occupancy_data())
+    return jsonify(
+        build_occupancy_data()
+    )
 
 
 @app.route("/api/occupancy/insights")
@@ -104,10 +224,23 @@ def occupancy_insights_api():
     data = build_occupancy_data()
 
     return jsonify({
-        "insights": data.get("insights", []),
-        "kpis": data.get("kpis", {}),
-        "data_source": data.get("data_source"),
-        "note": data.get("note"),
+        "insights": data.get(
+            "insights",
+            [],
+        ),
+
+        "kpis": data.get(
+            "kpis",
+            {},
+        ),
+
+        "data_source": data.get(
+            "data_source"
+        ),
+
+        "note": data.get(
+            "note"
+        ),
     })
 
 
@@ -116,32 +249,60 @@ def occupancy_rooms_api():
     data = build_occupancy_data()
 
     return jsonify({
-        "rooms": data.get("rooms", []),
-        "data_source": data.get("data_source"),
+        "rooms": data.get(
+            "rooms",
+            [],
+        ),
+
+        "data_source": data.get(
+            "data_source"
+        ),
     })
 
 
 @app.route("/api/security")
 def security_api():
-    return jsonify(build_security_data())
+    return jsonify(
+        build_security_data()
+    )
 
 
 @app.route("/api/security/alerts")
 def security_alerts_api():
     data = build_security_data()
-    kpis = data.get("kpis", {})
+
+    kpis = data.get(
+        "kpis",
+        {},
+    )
 
     return jsonify({
-        "alerts": data.get("alerts", []),
-        "active_alerts": kpis.get("active_alerts", 0),
-        "critical_alerts": kpis.get("critical_alerts", 0),
-        "data_source": data.get("data_source"),
+        "alerts": data.get(
+            "alerts",
+            [],
+        ),
+
+        "active_alerts": kpis.get(
+            "active_alerts",
+            0,
+        ),
+
+        "critical_alerts": kpis.get(
+            "critical_alerts",
+            0,
+        ),
+
+        "data_source": data.get(
+            "data_source"
+        ),
     })
 
 
 @app.route("/api/orchestrator/dashboard")
 def orchestrator_dashboard_api():
-    return jsonify(build_operations_data())
+    return jsonify(
+        build_operations_data()
+    )
 
 
 @app.route("/api/orchestrator/actions")
@@ -149,23 +310,44 @@ def orchestrator_actions_api():
     data = build_operations_data()
 
     return jsonify({
-        "actions": data.get("actions", []),
-        "kpis": data.get("kpis", {}),
-        "guardrails": data.get("guardrails", []),
+        "actions": data.get(
+            "actions",
+            [],
+        ),
+
+        "kpis": data.get(
+            "kpis",
+            {},
+        ),
+
+        "guardrails": data.get(
+            "guardrails",
+            [],
+        ),
     })
+
+
+@app.route("/api/cost-optimization")
+def cost_optimization_api():
+    return jsonify(
+        build_cost_optimization_data()
+    )
 
 
 @app.route("/api/health")
 def health_check():
     return jsonify({
         "status": "ok",
+
         "agents": {
             "energy": True,
             "maintenance": True,
             "occupancy": True,
             "security": True,
             "orchestrator": True,
+            "cost_optimization": True,
         },
+
         "data_sources": {
             "facility": "ready",
             "security": "ready",
@@ -179,27 +361,42 @@ def health_check():
 
 @app.route("/")
 def home():
-    return send_from_directory("static", "index.html")
+    return send_from_directory(
+        "static",
+        "index.html",
+    )
 
 
 @app.route("/maintenance.html")
 def maintenance_page():
-    return send_from_directory("static", "maintenance.html")
+    return send_from_directory(
+        "static",
+        "maintenance.html",
+    )
 
 
 @app.route("/occupancy.html")
 def occupancy_page():
-    return send_from_directory("static", "occupancy.html")
+    return send_from_directory(
+        "static",
+        "occupancy.html",
+    )
 
 
 @app.route("/security.html")
 def security_page():
-    return send_from_directory("static", "security.html")
+    return send_from_directory(
+        "static",
+        "security.html",
+    )
 
 
 @app.route("/operations.html")
 def operations_page():
-    return send_from_directory("static", "operations.html")
+    return send_from_directory(
+        "static",
+        "operations.html",
+    )
 
 
 # ============================================================
